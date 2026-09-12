@@ -9,12 +9,13 @@ cd "$ROOT"
 # $1 = prefix to site root ("" or "../"), $2 = active page key
 emit_header() {
   local P="$1" ACTIVE="$2" H="${1:-./}"
-  local a_home="" a_events="" a_ny="" a_contact=""
+  local a_home="" a_events="" a_ny="" a_contact="" a_client=""
   case "$ACTIVE" in
     home) a_home=" is-active";;
     events) a_events=" is-active";;
     newyork) a_ny=" is-active";;
     contact) a_contact=" is-active";;
+    client) a_client=" is-active";;
   esac
   cat <<HDR
   <header class="site-header">
@@ -32,6 +33,7 @@ emit_header() {
       </a>
 
       <div class="nav-side nav-side--right">
+        <a class="nav-link${a_client}" href="${P}client/">Client</a>
         <a class="nav-link${a_contact}" href="${P}contact/">Contact</a>
       </div>
     </nav>
@@ -41,6 +43,7 @@ emit_header() {
     <button class="overlay-close js-overlay-close" type="button" aria-label="Close menu"></button>
     <a class="${a_home:+is-active}" href="${H}">Portraits</a>
     <a class="${a_events:+is-active}" href="${P}events/">Event</a>
+    <a class="${a_client:+is-active}" href="${P}client/">Client</a>
     <a class="${a_contact:+is-active}" href="${P}contact/">Contact</a>
   </div>
 HDR
@@ -49,12 +52,13 @@ HDR
 # ---- footer -------------------------------------------------------------
 emit_footer() {
   local P="$1" ACTIVE="$2" H="${1:-./}"
-  local a_home="" a_events="" a_ny="" a_contact=""
+  local a_home="" a_events="" a_ny="" a_contact="" a_client=""
   case "$ACTIVE" in
     home) a_home=" is-active";;
     events) a_events=" is-active";;
     newyork) a_ny=" is-active";;
     contact) a_contact=" is-active";;
+    client) a_client=" is-active";;
   esac
   cat <<FTR
   <footer class="site-footer">
@@ -62,7 +66,8 @@ emit_footer() {
       <nav class="footer__menu" aria-label="Footer">
         <a class="${a_home:+is-active}" href="${H}">Portraits</a>
         <a class="${a_events:+is-active}" href="${P}events/">Event</a>
-        <a class="${a_contact:+is-active}" href="${P}contact/">Contact</a>
+        <a class="${a_client:+is-active}" href="${P}client/">Client</a>
+    <a class="${a_contact:+is-active}" href="${P}contact/">Contact</a>
       </nav>
 
       <div class="footer__last">

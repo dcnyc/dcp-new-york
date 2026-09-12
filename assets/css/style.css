@@ -233,6 +233,36 @@ body.menu-open{overflow:hidden}
 }
 
 /* ==========================================================================
+   Client — front door to the password-protected galleries
+   ========================================================================== */
+.gate{
+  max-width:640px;margin:0 auto;
+  padding:70px var(--block-edge-space-x) 110px;
+  text-align:center;
+}
+.gate__eyebrow{margin-bottom:26px;color:var(--primary-paragraphs)}
+.gate__title{margin-bottom:26px}
+.gate__text{color:var(--primary-paragraphs)}
+.gate__text p + p{margin-top:1.4em}
+.gate__action{margin-top:40px}
+.gate__note{
+  margin-top:34px;
+  font-size:min(.75rem,calc(1rem - .28vw));line-height:1.6em;
+  color:var(--primary-paragraphs);
+}
+.gate__note a{
+  color:var(--primary-headings);
+  border-bottom:1px solid var(--primary-details);
+  transition:border-color .25s ease;
+}
+.gate__note a:hover{border-bottom-color:var(--primary-headings)}
+
+@media screen and (max-width:767px){
+  .gate{padding:40px var(--block-edge-space-x) 70px}
+  .gate__action{margin-top:32px}
+}
+
+/* ==========================================================================
    Contact form
    ========================================================================== */
 .contact-form-block{padding:40px var(--block-edge-space-x) 100px}
@@ -295,10 +325,17 @@ body.menu-open{overflow:hidden}
   color:var(--primary-headings);transition:opacity .25s ease;
 }
 .footer__menu a:hover,.footer__menu a.is-active{opacity:.55}
+/* Equal-width outer columns so the social icon sits on the true centre line
+   of the page, rather than wherever space-between happens to leave it. */
 .footer__last{
-  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;gap:20px;
   position:relative;
 }
+.footer__copyright{justify-self:start}
+.footer__socials{justify-self:center}
+.footer__last .go-to-top{justify-self:end}
 .footer__copyright{color:var(--primary-paragraphs)}
 .footer__socials a{color:var(--button-background);transition:opacity .25s ease}
 .footer__socials a:hover{opacity:.6}
@@ -308,8 +345,10 @@ body.menu-open{overflow:hidden}
 .go-to-top svg{display:block;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.2}
 @media screen and (max-width:767px){
   .footer__menu{gap:22px;margin-bottom:16px}
-  .footer__last{flex-direction:column;gap:18px}
-  .go-to-top{position:absolute;right:0;top:0}
+  /* Stacked and centred on phones; the arrow tucks into the top-right. */
+  .footer__last{grid-template-columns:1fr;justify-items:center;gap:18px}
+  .footer__copyright,.footer__socials{justify-self:center}
+  .footer__last .go-to-top{position:absolute;right:0;top:0;justify-self:end}
 }
 
 /* ==========================================================================
