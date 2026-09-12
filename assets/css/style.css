@@ -218,7 +218,10 @@ body.menu-open{overflow:hidden}
 }
 .bio__col{text-align:center}
 .bio__col h2{line-height:1.05em}
-.bio__photo{width:100%;aspect-ratio:1/2;overflow:hidden}
+/* 3/4 matches the photograph's own proportions, so nothing is cropped. The
+   original 1/2 frame suited the old narrow image; against a 3:4 portrait it
+   would slice off both arms and the camera. */
+.bio__photo{width:100%;aspect-ratio:3/4;overflow:hidden}
 .bio__photo img{width:100%;height:100%;object-fit:cover}
 /* The column stays centred on the page, but the copy itself is ragged-right.
    Centring worked for the original two short lines; at four paragraphs every
@@ -232,7 +235,7 @@ body.menu-open{overflow:hidden}
 
 @media screen and (max-width:767px){
   .bio__row{grid-template-columns:1fr;gap:26px}
-  .bio__photo{aspect-ratio:1/1}
+  .bio__photo{aspect-ratio:3/4}
   .bio__eyebrow{margin-bottom:28px}
   .bio__text{margin-top:34px}
 }

@@ -162,7 +162,7 @@ emit_head() {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${P}assets/css/style.css?v=4">
+  <link rel="stylesheet" href="${P}assets/css/style.css?v=5">
 </head>
 <body>
 HEAD
@@ -171,7 +171,7 @@ HEAD
 emit_tail() {
   local P="$1"
   cat <<TAIL
-  <script src="${P}assets/js/site.js?v=4"></script>
+  <script src="${P}assets/js/site.js?v=5"></script>
 </body>
 </html>
 TAIL
@@ -196,13 +196,13 @@ build_gallery() {
 }
 
 build_gallery "index.html" "" "home" \
-  "DCP New York" "New York based portrait and event photography" \
+  "DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
   "portraits" "assets/img/portraits/01-AJ-Stillabower-Composer-1.jpg"
 
 build_gallery "newyork/index.html" "../" "newyork" \
-  "New York - DCP New York" "New York based portrait and event photography" \
+  "New York - DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
   "newyork" "assets/img/newyork/01-dcpnyc-001.jpg"
 
 build_gallery "events/index.html" "../" "events" \
-  "Event - DCP New York" "New York based portrait and event photography" \
+  "Event - DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
   "events" "assets/img/events/01-IMG_1590.jpg"
