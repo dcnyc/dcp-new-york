@@ -33,10 +33,16 @@ run `gh auth login`.
 
 ## 3. Turn on Pages
 
-**Settings → Pages**
+**Settings → Pages → Source: GitHub Actions**
 
-- **Source:** Deploy from a branch
-- **Branch:** `main`, folder `/ (root)` → Save
+The site is published by `.github/workflows/pages.yml`, not by branch deploys.
+The workflow copies an explicit allowlist of files into `_site` and uploads
+only that, so `README.md`, `DEPLOY.md`, `tools/` and the dotfiles stay in the
+repository but are never reachable on the live domain. It then fails the build
+if any of them somehow made it in.
+
+**When you add a new page folder, add it to the `PUBLISH` list in that
+workflow** — anything not named there is not published, which is the point.
 
 It publishes at `https://dcnyc.github.io/dcp-new-york/` within a minute
 or two. Confirm that works before touching DNS — it isolates any build problem
