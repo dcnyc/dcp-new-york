@@ -37,7 +37,16 @@
      No backend: compose a mail message from the fields. Swap in a real
      endpoint by giving the <form> an action/method and dropping data-mailto. */
   var cform = document.querySelector('.js-contact-form');
-  if (cform && cform.dataset.mailto) {
+
+  /* The address is stored split so it is not a harvestable "a@b.c" string in
+     the page source; join it only when it is actually needed. */
+  function recipient(form) {
+    var u = form.dataset.mailtoUser, d = form.dataset.mailtoDomain;
+    if (u && d) return u + String.fromCharCode(64) + d;
+    return form.dataset.mailto || '';
+  }
+
+  if (cform && recipient(cform)) {
     cform.addEventListener('submit', function (e) {
       e.preventDefault();
 
@@ -65,7 +74,7 @@
       ];
 
       window.location.href =
-        'mailto:' + cform.dataset.mailto +
+        'mailto:' + recipient(cform) +
         '?subject=' + encodeURIComponent('Website enquiry from ' + get('name')) +
         '&body=' + encodeURIComponent(lines.join('\n'));
     });

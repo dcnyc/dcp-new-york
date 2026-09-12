@@ -80,12 +80,19 @@
     <!-- ============ Contact form ============ -->
     <section class="contact-form-block">
       <!--
-        This form has no server behind it. By default it opens the visitor's
-        mail client addressed to data-mailto below.
-        To use a real form service instead (Formspree, Netlify Forms, etc.),
-        set action="..." method="post" on the <form> and delete data-mailto.
+        This form has no server behind it: it opens the visitor's mail client.
+
+        The address is split across two attributes on purpose. Address-harvesting
+        bots regex the page source for the usual name-at-domain-dot-tld shape,
+        which a split address does not match. It is reassembled in JS on submit.
+        Keep it split; writing it out in one piece undoes the protection.
+
+        To use a real form service instead (Formspree, Web3Forms, Netlify Forms),
+        set action="..." method="post" on the <form> and delete both attributes.
       -->
-      <form class="contact-form js-contact-form" data-mailto="hello@example.com" novalidate>
+      <form class="contact-form js-contact-form"
+            data-mailto-user="dennisjchristians"
+            data-mailto-domain="gmail.com" novalidate>
         <div class="form-row">
           <div class="form-field">
             <label for="cf-name">Your name <span class="req">*</span></label>
