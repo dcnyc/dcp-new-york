@@ -236,17 +236,26 @@ body.menu-open{overflow:hidden}
    Client — front door to the password-protected galleries
    ========================================================================== */
 .gate{
-  max-width:640px;margin:0 auto;
-  padding:70px var(--block-edge-space-x) 110px;
+  max-width:620px;
+  margin-left:auto;margin-right:auto;
+  padding:56px var(--block-edge-space-x) 96px;
   text-align:center;
 }
-.gate__eyebrow{margin-bottom:26px;color:var(--primary-paragraphs)}
-.gate__title{margin-bottom:26px}
+.gate__eyebrow{margin-bottom:20px;color:var(--primary-paragraphs)}
+
+/* Deliberately smaller than the h1 scale: this is a short utility page, and
+   the full display size overpowers one line of text. Matches the heading-3
+   step used elsewhere in the site. */
+.gate__title{
+  font-size:min(2.5rem,calc(1rem + 1.67vw));
+  line-height:1.1em;letter-spacing:-.01em;
+  margin-bottom:18px;
+}
 .gate__text{color:var(--primary-paragraphs)}
-.gate__text p + p{margin-top:1.4em}
-.gate__action{margin-top:40px}
+.gate__text p + p{margin-top:1.2em}
+.gate__action{margin-top:32px}
 .gate__note{
-  margin-top:34px;
+  margin-top:28px;
   font-size:min(.75rem,calc(1rem - .28vw));line-height:1.6em;
   color:var(--primary-paragraphs);
 }
@@ -258,8 +267,9 @@ body.menu-open{overflow:hidden}
 .gate__note a:hover{border-bottom-color:var(--primary-headings)}
 
 @media screen and (max-width:767px){
-  .gate{padding:40px var(--block-edge-space-x) 70px}
-  .gate__action{margin-top:32px}
+  .gate{padding:32px var(--block-edge-space-x) 64px}
+  .gate__action{margin-top:28px}
+  .gate__note{margin-top:24px}
 }
 
 /* ==========================================================================

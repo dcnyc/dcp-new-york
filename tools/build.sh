@@ -2,6 +2,11 @@
 # Generates the DCP New York gallery pages from the downloaded image folders.
 set -euo pipefail
 
+# NOTE: asset URLs carry a ?v=N cache-buster. GitHub Pages serves CSS/JS with
+# max-age=600, so without it a style change can take ten minutes to appear.
+# When you edit assets/css/style.css or assets/js/site.js, bump the number here
+# AND in contact/index.html and client/index.html, then rebuild.
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -157,7 +162,7 @@ emit_head() {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${P}assets/css/style.css">
+  <link rel="stylesheet" href="${P}assets/css/style.css?v=3">
 </head>
 <body>
 HEAD
@@ -166,7 +171,7 @@ HEAD
 emit_tail() {
   local P="$1"
   cat <<TAIL
-  <script src="${P}assets/js/site.js"></script>
+  <script src="${P}assets/js/site.js?v=3"></script>
 </body>
 </html>
 TAIL
