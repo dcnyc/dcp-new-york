@@ -1,8 +1,5 @@
 # DCP New York
 
-A static recreation of `dcpnewyork.mypixieset.com` — same pages, same URLs, same
-styling, no Pixieset dependency.
-
 ## Pages
 
 | URL         | File                 | Nav label          |
@@ -10,12 +7,7 @@ styling, no Pixieset dependency.
 | `/`         | `index.html`         | Portraits          |
 | `/events/`  | `events/index.html`  | Event              |
 | `/contact/` | `contact/index.html` | Contact            |
-| `/newyork/` | `newyork/index.html` | *(unlinked)*       |
 
-`/newyork/` is live and fully built, but deliberately absent from the header,
-mobile overlay and footer menus — it is reachable only by typing the URL. To put
-it back in the navigation, re-add its `<a>` to `emit_header` and `emit_footer`
-in the build script and rerun.
 
 Links are written relative, so the site works both when served from a web root
 and when opened straight off disk.
@@ -30,7 +22,6 @@ assets/
   img/
     logo.png
     portraits/       24 photos — home page
-    newyork/         23 photos — /newyork/
     events/          30 photos — /events/
     about/me.jpg     contact page portrait
 ```
