@@ -148,11 +148,21 @@
     function normalise() {
       var w = setWidth();
       if (w <= 0) return;
-      if (track.scrollLeft < w * 0.5) {
-        track.scrollLeft += w;
-      } else if (track.scrollLeft > w * 1.5) {
-        track.scrollLeft -= w;
-      }
+
+      var delta = 0;
+      if (track.scrollLeft < w * 0.5) delta = w;
+      else if (track.scrollLeft > w * 1.5) delta = -w;
+      if (!delta) return;
+
+      /* On phones the track uses mandatory scroll-snap, which would try to
+         animate this jump and undo it. Lift snapping for the one frame the
+         jump takes, then restore it. */
+      var snap = track.style.scrollSnapType;
+      track.style.scrollSnapType = 'none';
+      track.scrollLeft += delta;
+      requestAnimationFrame(function () {
+        track.style.scrollSnapType = snap;
+      });
     }
 
     function step(dir) {

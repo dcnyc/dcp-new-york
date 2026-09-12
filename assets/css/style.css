@@ -139,10 +139,38 @@ body.menu-open{overflow:hidden}
 .carousel__track.is-dragging img{pointer-events:none}
 .carousel__slide{flex:0 0 auto;margin:0}
 .carousel__slide img{
-  margin:0;width:auto;height:230px;object-fit:contain;
+  margin:0;object-fit:contain;
   -webkit-user-drag:none;user-select:none;
 }
-@media screen and (min-width:768px){.carousel__slide img{height:470px}}
+
+/* --- Phones: one photo per screen, shown whole, swiped between ---------
+   Each slide is exactly one viewport wide and snaps, so a swipe advances by
+   one photo. The image is bounded on both axes and centred, so a tall
+   portrait shot shows its full length instead of being cropped or shrunk
+   into a filmstrip. */
+@media screen and (max-width:767px){
+  .carousel__track{scroll-snap-type:x mandatory}
+  .carousel__slide{
+    width:100vw;
+    display:flex;align-items:center;justify-content:center;
+    scroll-snap-align:center;
+  }
+  .carousel__slide img{
+    width:auto;height:auto;
+    max-width:100vw;
+    max-height:72vh;
+  }
+  /* dvh excludes the mobile address bar, so the photo is not clipped as it
+     shows and hides. Only applied where supported. */
+  @supports (height:100dvh){
+    .carousel__slide img{max-height:72dvh}
+  }
+}
+
+/* --- Tablet and up: the original uniform-height filmstrip --- */
+@media screen and (min-width:768px){
+  .carousel__slide img{width:auto;height:470px;max-width:none;max-height:none}
+}
 @media screen and (min-width:992px){.carousel__slide img{height:36.6071428571vw}}
 @media screen and (min-width:1680px){.carousel__slide img{height:615px}}
 
