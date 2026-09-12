@@ -1,0 +1,23 @@
+# OS / editor cruft
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# ---------------------------------------------------------------------------
+# Unused source photos kept locally but NOT published.
+#
+# These are leftovers from the original export. None of them appear on the
+# site, and anything committed here becomes publicly downloadable from the
+# live domain — so they stay out of the repo. Delete these lines if you
+# deliberately want them online.
+# ---------------------------------------------------------------------------
+/Ching-wen-Hsiao-Pianist-1-*.jpg
+/IMG_0504-*.jpg
+/Michael-Cabe-Pianist-1-*.jpg
+/Sophie-Xuefei-Zhang-Pianist-1-*.jpg
+/Sophie-Xuefei-Zhang-Pianist-3-*.jpg
+/Will-Healy-Composer-1-*.jpg

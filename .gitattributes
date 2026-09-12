@@ -1,0 +1,13 @@
+# Keep line endings consistent. Shell scripts in particular must stay LF or
+# they fail to run on Linux/macOS.
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Never munge binaries
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
