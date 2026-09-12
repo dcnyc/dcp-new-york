@@ -1,0 +1,86 @@
+name: Deploy site to GitHub Pages
+
+# Publishes ONLY the files that make up the website. Everything else in the
+# repository — README.md, DEPLOY.md, tools/, dotfiles — stays in the repo but
+# is never uploaded, so it is not reachable on the live domain.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; let a running one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Stage only the published files
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+
+          # Explicit allowlist. Anything not named here is NOT published, so a
+          # new note or script added to the repo stays private by default.
+          # Add a new page folder here when you create one.
+          PUBLISH=(
+            index.html
+            CNAME
+            .nojekyll
+            assets
+            events
+            newyork
+            contact
+            client
+          )
+
+          for item in "${PUBLISH[@]}"; do
+            if [ -e "$item" ]; then
+              cp -r -- "$item" _site/
+            else
+              echo "::error::listed for publication but missing: $item"
+              exit 1
+            fi
+          done
+
+          echo "--- staged for deployment ---"
+          find _site -maxdepth 2 | sort
+
+      - name: Confirm nothing private slipped in
+        run: |
+          set -euo pipefail
+          fail=0
+          for leak in README.md DEPLOY.md tools .gitignore .gitattributes .github; do
+            if [ -e "_site/$leak" ]; then
+              echo "::error::$leak must not be published"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Upload the artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
