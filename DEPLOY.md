@@ -4,7 +4,7 @@ Setup: **`www.dcpnewyork.com` is the primary address**, the apex
 (`dcpnewyork.com`) redirects to it, repo is **public**, hosted from the `main`
 branch.
 
-Replace `YOUR-USERNAME` throughout.
+Every value below is filled in and ready to use as-is.
 
 ---
 
@@ -23,7 +23,7 @@ The local repo is already initialised and committed on `main`.
 
 ```bash
 cd "C:/Users/DNJC/Documents/Git Repos/DCP New York"
-git remote add origin https://github.com/YOUR-USERNAME/dcp-new-york.git
+git remote add origin https://github.com/dcnyc/dcp-new-york.git
 git push -u origin main
 ```
 
@@ -38,7 +38,7 @@ run `gh auth login`.
 - **Source:** Deploy from a branch
 - **Branch:** `main`, folder `/ (root)` → Save
 
-It publishes at `https://YOUR-USERNAME.github.io/dcp-new-york/` within a minute
+It publishes at `https://dcnyc.github.io/dcp-new-york/` within a minute
 or two. Confirm that works before touching DNS — it isolates any build problem
 from any DNS problem.
 
@@ -57,7 +57,7 @@ cloud), not Proxied — this matters, see the warning below.
 
 | Type  | Name  | Content                   | Proxy    |
 | ----- | ----- | ------------------------- | -------- |
-| CNAME | `www` | `YOUR-USERNAME.github.io` | DNS only |
+| CNAME | `www` | `dcnyc.github.io`         | DNS only |
 | A     | `@`   | `185.199.108.153`         | DNS only |
 | A     | `@`   | `185.199.109.153`         | DNS only |
 | A     | `@`   | `185.199.110.153`         | DNS only |
