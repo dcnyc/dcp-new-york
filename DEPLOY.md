@@ -1,10 +1,10 @@
 # Deploying to GitHub Pages with a Cloudflare domain
 
-Setup: **`www.YOURDOMAIN.com` is the primary address**, the apex
-(`YOURDOMAIN.com`) redirects to it, repo is **public**, hosted from the `main`
+Setup: **`www.dcpnewyork.com` is the primary address**, the apex
+(`dcpnewyork.com`) redirects to it, repo is **public**, hosted from the `main`
 branch.
 
-Replace `YOURDOMAIN.com` and `YOUR-USERNAME` throughout.
+Replace `YOUR-USERNAME` throughout.
 
 ---
 
@@ -44,7 +44,7 @@ from any DNS problem.
 
 ## 4. Custom domain
 
-**Settings → Pages → Custom domain** → enter `www.YOURDOMAIN.com` → Save.
+**Settings → Pages → Custom domain** → enter `www.dcpnewyork.com` → Save.
 
 The repo already contains a `CNAME` file with this value, which is the same
 thing that box writes. Leave **Enforce HTTPS** unchecked for now; you cannot
@@ -76,10 +76,14 @@ Optionally add the IPv6 apex records too:
 2606:50c0:8003::153
 ```
 
-Delete any pre-existing `A`/`AAAA`/`CNAME` on `@` or `www` left over from
-Cloudflare's parking page, or they will conflict.
+The zone is currently empty (0 of 200 records), so there is nothing to remove
+first — these five are the only records the site needs.
 
 ## 6. SSL — the two settings that break this
+
+> **Not already done.** The `DNS Setup: Full` badge on the DNS page is a
+> different setting — it only means Cloudflare is authoritative for the zone.
+> The encryption mode below lives under **SSL/TLS** and is set separately.
 
 > **SSL/TLS → Overview → set encryption mode to `Full`.**
 > If it is left on **Flexible**, the site enters an infinite redirect loop.
@@ -116,17 +120,17 @@ on DNS-only, leaving it there is the lower-maintenance choice.
 
 ```bash
 # Points at GitHub?
-nslookup www.YOURDOMAIN.com
+nslookup www.dcpnewyork.com
 
 # 200, and served by GitHub?
-curl -sI https://www.YOURDOMAIN.com | findstr /i "HTTP server location"
+curl -sI https://www.dcpnewyork.com | findstr /i "HTTP server location"
 
 # Apex redirects to www?
-curl -sI https://YOURDOMAIN.com | findstr /i "HTTP location"
+curl -sI https://dcpnewyork.com | findstr /i "HTTP location"
 ```
 
 Expect `server: GitHub.com` (DNS-only) or `server: cloudflare` (proxied), and
-the apex returning a `301` to `https://www.YOURDOMAIN.com/`.
+the apex returning a `301` to `https://www.dcpnewyork.com/`.
 
 ## Updating the site
 
