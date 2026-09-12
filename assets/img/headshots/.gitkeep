@@ -1,0 +1,7 @@
+Drop headshot photos in this folder.
+
+Name them with a two-digit order prefix, as the other galleries do:
+  01-jane-doe.jpg, 02-john-smith.jpg, ...
+
+They are not published until "headshots" is added to the PUBLISH list in
+.github/workflows/pages.yml.

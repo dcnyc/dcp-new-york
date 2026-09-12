@@ -241,6 +241,31 @@ body.menu-open{overflow:hidden}
 }
 
 /* ==========================================================================
+   Intro block — copy above a gallery (Headshots)
+   ========================================================================== */
+.intro{
+  max-width:680px;
+  margin-left:auto;margin-right:auto;
+  padding:8px var(--block-edge-space-x) 44px;
+  text-align:center;
+}
+.intro__eyebrow{margin-bottom:20px;color:var(--primary-paragraphs)}
+.intro__title{
+  font-size:min(2.5rem,calc(1rem + 1.67vw));
+  line-height:1.1em;letter-spacing:-.01em;
+  margin-bottom:22px;
+}
+/* Ragged-right: centred text is hard to read past a couple of lines. */
+.intro__text{text-align:left;color:var(--primary-paragraphs)}
+.intro__text p + p{margin-top:1.15em}
+.intro__action{margin-top:30px}
+
+@media screen and (max-width:767px){
+  .intro{padding:4px var(--block-edge-space-x) 32px}
+  .intro__action{margin-top:26px}
+}
+
+/* ==========================================================================
    Client — front door to the password-protected galleries
    ========================================================================== */
 .gate{

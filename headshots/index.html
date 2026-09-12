@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Client Galleries | DCP New York</title>
-  <meta name="description" content="Private, password-protected client galleries for DCP New York headshot, portrait and event sessions.">
-  <link rel="canonical" href="https://www.dcpnewyork.com/client/">
+  <title>Headshot Photographer | Bergen County NJ &amp; New York City</title>
+  <meta name="description" content="Corporate, actor and personal branding headshots in Wyckoff, Ridgewood, Glen Rock, Paramus and across Bergen County, NJ, and New York City. Relaxed sessions, natural expression.">
+  <link rel="canonical" href="https://www.dcpnewyork.com/headshots/">
 
   <meta property="og:site_name" content="DCP New York">
-  <meta property="og:title" content="Client Galleries | DCP New York">
+  <meta property="og:title" content="Headshot Photographer | Bergen County NJ &amp; New York City">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.dcpnewyork.com/client/">
-  <meta property="og:description" content="Private, password-protected client galleries for DCP New York headshot, portrait and event sessions.">
+  <meta property="og:url" content="https://www.dcpnewyork.com/headshots/">
+  <meta property="og:description" content="Corporate, actor and personal branding headshots in Bergen County, NJ and New York City.">
   <meta property="og:image" content="https://www.dcpnewyork.com/assets/img/about/dennis-2.jpg">
   <meta name="twitter:card" content="summary_large_image">
 
@@ -72,6 +72,27 @@
 
 </head>
 <body>
+  <!--
+    ============================================================
+    NOT PUBLISHED YET.
+
+    This page is deliberately absent from the PUBLISH list in
+    .github/workflows/pages.yml, so it stays in the repository and is
+    never uploaded to the live site. It is also not linked from any
+    navigation menu.
+
+    To go live, three things:
+      1. add "headshots" to PUBLISH in .github/workflows/pages.yml
+         (must be edited via GitHub's web editor - the saved credential
+         lacks the `workflow` scope)
+      2. add the nav links: emit_header and emit_footer in tools/build.sh,
+         plus contact/index.html and client/index.html, then rebuild
+      3. drop the photos into assets/img/headshots/ and fill in the
+         carousel below
+
+    The copy below is a first draft - rewrite it in your own words.
+    ============================================================
+  -->
   <header class="site-header">
     <nav class="header-nav" aria-label="Main">
       <div class="nav-side nav-side--left">
@@ -87,7 +108,7 @@
       </a>
 
       <div class="nav-side nav-side--right">
-        <a class="nav-link is-active" href="../client/">Client</a>
+        <a class="nav-link" href="../client/">Client</a>
         <a class="nav-link" href="../contact/">Contact</a>
       </div>
     </nav>
@@ -97,53 +118,53 @@
     <button class="overlay-close js-overlay-close" type="button" aria-label="Close menu"></button>
     <a class="" href="../">Portraits</a>
     <a class="" href="../events/">Event</a>
-    <a class="is-active" href="../client/">Client</a>
+    <a class="" href="../client/">Client</a>
     <a class="" href="../contact/">Contact</a>
   </div>
 
   <main role="main">
-    <section class="gate">
-      <h6 class="gate__eyebrow">Private galleries</h6>
+    <section class="intro">
+      <h6 class="intro__eyebrow">Headshots</h6>
+      <h1 class="intro__title">Headshots that look like you</h1>
 
-      <h1 class="gate__title">Client access</h1>
-
-      <div class="gate__text">
-        <p>Your gallery is private and password protected. Use the link and password from your delivery email to view your photographs, download high-resolution files, and share a favourites list.</p>
+      <div class="intro__text">
+        <p>A good headshot should look like you on a good day &mdash; relaxed, recognisable, and not over-retouched. I photograph corporate, actor and personal branding headshots on location across Bergen County and New York City, in a session built around getting a genuine expression rather than a pose.</p>
+        <p>Sessions are unhurried. We will talk through what the picture is for, try a few looks and backgrounds, and you will see the frames as we go.</p>
       </div>
 
-      <!--
-        Password gate.
-
-        This runs in the browser, so treat it as a deterrent, not security:
-        anyone who reads the page source can see the destination and could go
-        there directly. The real protection is Pixieset's own per-gallery
-        password, which this sits in front of.
-
-        The password itself is NOT stored here - only its SHA-256 hash - so it
-        cannot simply be read off the page. Change it by running:
-            bash tools/set-client-password.sh
-        which prompts for a new password and rewrites the hash below.
-      -->
-      <div class="gate__action">
-        <button class="btn js-gate-unlock" type="button">Enter client area</button>
-
-        <form class="gate__lock js-gate-form" hidden
-              data-hash="057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86"
-              data-url="https://dcpnewyork.pixieset.com/">
-          <label class="gate__lock-label" for="gate-pw">Enter the password from your delivery email</label>
-          <div class="gate__lock-row">
-            <input type="password" id="gate-pw" name="password"
-                   autocomplete="current-password" autocapitalize="off"
-                   spellcheck="false" required>
-            <button class="btn" type="submit">Continue</button>
-          </div>
-          <p class="gate__error js-gate-error" role="alert" hidden></p>
-        </form>
+      <div class="intro__action">
+        <a class="btn" href="../contact/">Book a session</a>
       </div>
+    </section>
 
-      <p class="gate__note">
-        Lost your password or link? <a href="../contact/">Get in touch</a> and I will resend it.
-      </p>
+    <!--
+      Carousel: add the photos here once they are in assets/img/headshots/,
+      following the same markup the other galleries use. Keep the width and
+      height attributes accurate or the strip will jump about while loading.
+
+      <div class="carousel__slide">
+        <img src="../assets/img/headshots/01-example.jpg" alt="..."
+             width="1200" height="1800" loading="lazy" draggable="false">
+      </div>
+    -->
+    <section class="photo-slider">
+      <div class="carousel js-carousel">
+        <div class="carousel__track">
+          <!-- slides go here -->
+        </div>
+
+        <button class="carousel__zone carousel__zone--prev js-prev" type="button" aria-label="Previous photo"></button>
+        <button class="carousel__zone carousel__zone--next js-next" type="button" aria-label="Next photo"></button>
+
+        <div class="carousel__nav">
+          <button class="js-prev" type="button" aria-label="Previous photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button class="js-next" type="button" aria-label="Next photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -152,7 +173,7 @@
       <nav class="footer__menu" aria-label="Footer">
         <a class="" href="../">Portraits</a>
         <a class="" href="../events/">Event</a>
-        <a class="is-active" href="../client/">Client</a>
+        <a class="" href="../client/">Client</a>
         <a class="" href="../contact/">Contact</a>
       </nav>
 

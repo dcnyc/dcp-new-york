@@ -229,7 +229,7 @@ $(emit_jsonld)
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${P}assets/css/style.css?v=7">
+  <link rel="stylesheet" href="${P}assets/css/style.css?v=8">
 </head>
 <body>
 HEAD
@@ -238,7 +238,7 @@ HEAD
 emit_tail() {
   local P="$1"
   cat <<TAIL
-  <script src="${P}assets/js/site.js?v=7"></script>
+  <script src="${P}assets/js/site.js?v=8"></script>
 </body>
 </html>
 TAIL
