@@ -393,8 +393,17 @@ body.menu-open{overflow:hidden}
 .go-to-top{color:var(--primary-headings);transition:opacity .25s ease}
 .go-to-top:hover{opacity:.5}
 .go-to-top svg{display:block;width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.2}
+/* Service-area line. Small and muted deliberately: it is real, useful
+   information for a local business, not a keyword dump. */
+.footer__areas{
+  max-width:640px;margin:24px auto 0;text-align:center;
+  font-size:min(.6875rem,calc(1rem - .34vw));line-height:1.7em;
+  letter-spacing:.02em;color:var(--primary-paragraphs);opacity:.85;
+}
+
 @media screen and (max-width:767px){
   .footer__menu{gap:22px;margin-bottom:16px}
+  .footer__areas{margin-top:20px}
   /* Stacked and centred on phones; the arrow tucks into the top-right. */
   .footer__last{grid-template-columns:1fr;justify-items:center;gap:18px}
   .footer__copyright,.footer__socials{justify-self:center}

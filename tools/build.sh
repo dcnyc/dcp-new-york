@@ -91,6 +91,11 @@ emit_footer() {
         </a>
       </div>
 
+      <p class="footer__areas">
+        Headshot, portrait, corporate and event photography in Wyckoff, Ridgewood,
+        Glen Rock, Paramus, Franklin Lakes, Fair Lawn and across Bergen County,
+        New Jersey &mdash; and throughout New York City.
+      </p>
     </div>
   </footer>
 FTR
@@ -139,8 +144,66 @@ CAR_CLOSE
 
 # ---- page shell ---------------------------------------------------------
 # $1 out, $2 prefix, $3 active, $4 <title>, $5 description, $6 og image path
+# ---- structured data ----------------------------------------------------
+# Machine-readable business + service-area data for search engines. The full
+# town list lives here rather than being stuffed into visible copy, which is
+# what Google actually wants and what keyword-stuffed page text gets penalised
+# for.
+emit_jsonld() {
+  cat <<'JSONLD'
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "name": "DCP New York - Dennis Christians Photography",
+    "url": "https://www.dcpnewyork.com/",
+    "image": "https://www.dcpnewyork.com/assets/img/about/dennis-2.jpg",
+    "description": "Headshot, portrait, corporate and event photographer serving Bergen County and northern New Jersey, and New York City.",
+    "priceRange": "$$",
+    "sameAs": ["https://www.instagram.com/dcpnewyork"],
+    "knowsAbout": [
+      "Headshot photography",
+      "Professional headshots",
+      "Corporate headshots",
+      "Actor headshots",
+      "LinkedIn headshots",
+      "Portrait photography",
+      "Environmental portraits",
+      "Musician portraits",
+      "Lifestyle photography",
+      "Personal branding photography",
+      "Corporate event photography",
+      "Event photography"
+    ],
+    "areaServed": [
+      { "@type": "AdministrativeArea", "name": "Bergen County, New Jersey" },
+      { "@type": "City", "name": "Wyckoff, New Jersey" },
+      { "@type": "City", "name": "Ridgewood, New Jersey" },
+      { "@type": "City", "name": "Glen Rock, New Jersey" },
+      { "@type": "City", "name": "Paramus, New Jersey" },
+      { "@type": "City", "name": "Franklin Lakes, New Jersey" },
+      { "@type": "City", "name": "Fair Lawn, New Jersey" },
+      { "@type": "City", "name": "Ramsey, New Jersey" },
+      { "@type": "City", "name": "Mahwah, New Jersey" },
+      { "@type": "City", "name": "Allendale, New Jersey" },
+      { "@type": "City", "name": "Midland Park, New Jersey" },
+      { "@type": "City", "name": "Ho-Ho-Kus, New Jersey" },
+      { "@type": "City", "name": "Waldwick, New Jersey" },
+      { "@type": "City", "name": "Oakland, New Jersey" },
+      { "@type": "City", "name": "Saddle River, New Jersey" },
+      { "@type": "City", "name": "Hawthorne, New Jersey" },
+      { "@type": "City", "name": "Montclair, New Jersey" },
+      { "@type": "City", "name": "Hoboken, New Jersey" },
+      { "@type": "City", "name": "Jersey City, New Jersey" },
+      { "@type": "City", "name": "New York, New York" }
+    ]
+  }
+  </script>
+JSONLD
+}
+
 emit_head() {
-  local P="$2" TITLE="$4" DESC="$5" OG="$6"
+  local P="$2" TITLE="$4" DESC="$5" OG="$6" CANON="${8:-}"
   cat <<HEAD
 <!DOCTYPE html>
 <html lang="en">
@@ -150,19 +213,23 @@ emit_head() {
 
   <title>${TITLE}</title>
   <meta name="description" content="${DESC}">
+  <link rel="canonical" href="https://www.dcpnewyork.com/${CANON}">
 
   <meta property="og:site_name" content="DCP New York">
   <meta property="og:title" content="${TITLE}">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.dcpnewyork.com/${CANON}">
   <meta property="og:description" content="${DESC}">
-  <meta property="og:image" content="${P}${OG}">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="https://www.dcpnewyork.com/${OG}">
+  <meta name="twitter:card" content="summary_large_image">
+
+$(emit_jsonld)
 
   <link rel="icon" href="${P}assets/img/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${P}assets/css/style.css?v=6">
+  <link rel="stylesheet" href="${P}assets/css/style.css?v=7">
 </head>
 <body>
 HEAD
@@ -171,7 +238,7 @@ HEAD
 emit_tail() {
   local P="$1"
   cat <<TAIL
-  <script src="${P}assets/js/site.js?v=6"></script>
+  <script src="${P}assets/js/site.js?v=7"></script>
 </body>
 </html>
 TAIL
@@ -181,10 +248,10 @@ TAIL
 # Build the three gallery pages
 # =========================================================================
 build_gallery() {
-  local OUT="$1" P="$2" KEY="$3" TITLE="$4" DESC="$5" DIR="$6" OG="$7"
+  local OUT="$1" P="$2" KEY="$3" TITLE="$4" DESC="$5" DIR="$6" OG="$7" CANON="${8:-}"
   mkdir -p "$(dirname "$OUT")"
   {
-    emit_head "$OUT" "$P" "$KEY" "$TITLE" "$DESC" "$OG"
+    emit_head "$OUT" "$P" "$KEY" "$TITLE" "$DESC" "$OG" "" "$CANON"
     emit_header "$P" "$KEY"
     echo '  <main role="main">'
     emit_carousel "$P" "$DIR"
@@ -195,14 +262,19 @@ build_gallery() {
   echo "built $OUT"
 }
 
+# Titles are kept under ~60 characters so Google does not truncate them, and
+# lead with what people actually search for rather than the brand name.
 build_gallery "index.html" "" "home" \
-  "DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
-  "portraits" "assets/img/portraits/01-AJ-Stillabower-Composer-1.jpg"
+  "Headshot &amp; Portrait Photographer | Bergen County NJ &amp; NYC" \
+  "Headshot and portrait photographer serving Wyckoff, Ridgewood, Glen Rock, Paramus and Bergen County, NJ, and New York City. Natural expression, clean composition." \
+  "portraits" "assets/img/portraits/01-AJ-Stillabower-Composer-1.jpg" ""
 
 build_gallery "newyork/index.html" "../" "newyork" \
-  "New York - DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
-  "newyork" "assets/img/newyork/01-dcpnyc-001.jpg"
+  "New York Portrait Photography | DCP New York" \
+  "Portrait and lifestyle photography on location in New York City, by a headshot and portrait photographer based in northern New Jersey." \
+  "newyork" "assets/img/newyork/01-dcpnyc-001.jpg" "newyork/"
 
 build_gallery "events/index.html" "../" "events" \
-  "Event - DCP New York" "Headshot, portrait, corporate and event photographer based in New York and New Jersey." \
-  "events" "assets/img/events/01-IMG_1590.jpg"
+  "Event Photographer | Northern NJ &amp; New York City" \
+  "Corporate and private event photography across Bergen County, northern New Jersey and New York City. Unobtrusive coverage, natural candid moments." \
+  "events" "assets/img/events/01-IMG_1590.jpg" "events/"
