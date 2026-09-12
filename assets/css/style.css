@@ -208,9 +208,10 @@ body.menu-open{overflow:hidden}
   max-width:var(--max-page-width);margin:0 auto;
   padding:8px var(--block-edge-space-x) 20px;
 }
-/* The eyebrow sits over the centre column, matching the original grid. */
-.bio__eyebrow{display:grid;grid-template-columns:9fr 6fr 9fr;margin-bottom:48px}
-.bio__eyebrow h6{grid-column:2;text-align:center}
+/* Full width rather than confined to the centre grid column: the tagline is
+   long, and uppercase with wide tracking it would wrap to several lines in a
+   quarter-width column. */
+.bio__eyebrow{margin-bottom:44px;text-align:center}
 .bio__row{
   display:grid;grid-template-columns:9fr 6fr 9fr;
   align-items:center;
@@ -219,17 +220,21 @@ body.menu-open{overflow:hidden}
 .bio__col h2{line-height:1.05em}
 .bio__photo{width:100%;aspect-ratio:1/2;overflow:hidden}
 .bio__photo img{width:100%;height:100%;object-fit:cover}
+/* The column stays centred on the page, but the copy itself is ragged-right.
+   Centring worked for the original two short lines; at four paragraphs every
+   line starting in a different place makes it noticeably harder to read.
+   For fully centred text again, change text-align to center. */
 .bio__text{
-  max-width:640px;margin:56px auto 0;text-align:center;
+  max-width:640px;margin:48px auto 0;text-align:left;
   color:var(--primary-paragraphs);
 }
-.bio__text p + p{margin-top:1.4em}
+.bio__text p + p{margin-top:1.15em}
 
 @media screen and (max-width:767px){
   .bio__row{grid-template-columns:1fr;gap:26px}
   .bio__photo{aspect-ratio:1/1}
-  .bio__eyebrow{grid-template-columns:1fr;margin-bottom:28px}
-  .bio__eyebrow h6{grid-column:1}
+  .bio__eyebrow{margin-bottom:28px}
+  .bio__text{margin-top:34px}
 }
 
 /* ==========================================================================

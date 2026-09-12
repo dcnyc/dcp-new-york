@@ -162,7 +162,7 @@ emit_head() {
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${P}assets/css/style.css?v=3">
+  <link rel="stylesheet" href="${P}assets/css/style.css?v=4">
 </head>
 <body>
 HEAD
@@ -171,7 +171,7 @@ HEAD
 emit_tail() {
   local P="$1"
   cat <<TAIL
-  <script src="${P}assets/js/site.js?v=3"></script>
+  <script src="${P}assets/js/site.js?v=4"></script>
 </body>
 </html>
 TAIL
