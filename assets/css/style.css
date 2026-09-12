@@ -262,6 +262,38 @@ body.menu-open{overflow:hidden}
 .gate__text{color:var(--primary-paragraphs)}
 .gate__text p + p{margin-top:1.2em}
 .gate__action{margin-top:32px}
+
+/* Password gate */
+.gate__lock{max-width:420px;margin:0 auto;text-align:left}
+.gate__lock-label{
+  display:block;margin-bottom:10px;text-align:center;
+  font-family:var(--sans);font-weight:500;
+  font-size:min(.75rem,calc(1rem - .28vw));
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--primary-headings);
+}
+.gate__lock-row{display:flex;gap:12px;align-items:stretch}
+.gate__lock input{
+  flex:1;min-width:0;
+  font-family:var(--sans);font-size:1rem;line-height:1.5em;
+  color:var(--primary-headings);background:var(--primary-background);
+  border:0;border-bottom:1px solid var(--primary-details);border-radius:0;
+  padding:10px 0;
+  transition:border-color .25s ease;
+  -webkit-appearance:none;appearance:none;
+}
+.gate__lock input:focus{outline:none;border-bottom-color:var(--primary-headings)}
+.gate__lock .btn{flex-shrink:0;padding:10px 26px}
+.gate__error{
+  margin-top:14px;text-align:center;
+  font-size:min(.75rem,calc(1rem - .28vw));line-height:1.6em;
+  color:var(--primary-headings);
+}
+
+@media screen and (max-width:480px){
+  .gate__lock-row{flex-direction:column;gap:18px}
+  .gate__lock .btn{width:100%}
+}
 .gate__note{
   margin-top:28px;
   font-size:min(.75rem,calc(1rem - .28vw));line-height:1.6em;

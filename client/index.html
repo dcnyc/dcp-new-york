@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/style.css?v=5">
+  <link rel="stylesheet" href="../assets/css/style.css?v=6">
 </head>
 <body>
   <header class="site-header">
@@ -60,8 +60,34 @@
         <p>Your gallery is private and password protected. Use the link and password from your delivery email to view your photographs, download high-resolution files, and share a favourites list.</p>
       </div>
 
+      <!--
+        Password gate.
+
+        This runs in the browser, so treat it as a deterrent, not security:
+        anyone who reads the page source can see the destination and could go
+        there directly. The real protection is Pixieset's own per-gallery
+        password, which this sits in front of.
+
+        The password itself is NOT stored here - only its SHA-256 hash - so it
+        cannot simply be read off the page. Change it by running:
+            bash tools/set-client-password.sh
+        which prompts for a new password and rewrites the hash below.
+      -->
       <div class="gate__action">
-        <a class="btn" href="https://dcpnewyork.pixieset.com/" target="_blank" rel="noopener noreferrer">Enter client area</a>
+        <button class="btn js-gate-unlock" type="button">Enter client area</button>
+
+        <form class="gate__lock js-gate-form" hidden
+              data-hash="057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86"
+              data-url="https://dcpnewyork.pixieset.com/">
+          <label class="gate__lock-label" for="gate-pw">Enter the password from your delivery email</label>
+          <div class="gate__lock-row">
+            <input type="password" id="gate-pw" name="password"
+                   autocomplete="current-password" autocapitalize="off"
+                   spellcheck="false" required>
+            <button class="btn" type="submit">Continue</button>
+          </div>
+          <p class="gate__error js-gate-error" role="alert" hidden></p>
+        </form>
       </div>
 
       <p class="gate__note">
@@ -98,6 +124,6 @@
     </div>
   </footer>
 
-  <script src="../assets/js/site.js?v=5"></script>
+  <script src="../assets/js/site.js?v=6"></script>
 </body>
 </html>

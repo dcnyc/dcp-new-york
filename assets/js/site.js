@@ -80,6 +80,70 @@
     });
   }
 
+  /* ---------------- Client-area password gate ----------------
+     A deterrent, not security: this runs in the browser, and the destination
+     is a public URL. Only the SHA-256 of the password is stored, so the
+     password itself cannot be read off the page, but a weak one could still
+     be guessed offline. Pixieset's own per-gallery password is the real lock.
+
+     crypto.subtle needs a secure context, so this works over https (and on
+     localhost) but not from a file:// preview. */
+  var gateUnlock = document.querySelector('.js-gate-unlock');
+  var gateForm = document.querySelector('.js-gate-form');
+
+  if (gateUnlock && gateForm) {
+    var gateError = gateForm.querySelector('.js-gate-error');
+    var gateInput = gateForm.querySelector('input[type="password"]');
+
+    function showError(msg) {
+      if (!gateError) return;
+      gateError.textContent = msg;
+      gateError.hidden = false;
+    }
+
+    gateUnlock.addEventListener('click', function () {
+      gateUnlock.hidden = true;
+      gateForm.hidden = false;
+      if (gateInput) gateInput.focus();
+    });
+
+    function sha256Hex(text) {
+      var bytes = new TextEncoder().encode(text);
+      return crypto.subtle.digest('SHA-256', bytes).then(function (buf) {
+        return Array.prototype.map
+          .call(new Uint8Array(buf), function (b) {
+            return b.toString(16).padStart(2, '0');
+          })
+          .join('');
+      });
+    }
+
+    gateForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (gateError) gateError.hidden = true;
+
+      var entered = gateInput ? gateInput.value.trim() : '';
+      if (!entered) return;
+
+      if (!window.crypto || !crypto.subtle) {
+        showError('This browser cannot check the password here. Please contact me for the link.');
+        return;
+      }
+
+      sha256Hex(entered).then(function (hex) {
+        if (hex === gateForm.dataset.hash) {
+          window.open(gateForm.dataset.url, '_blank', 'noopener');
+          gateForm.reset();
+        } else {
+          showError('That password was not recognised. Check your delivery email, or get in touch.');
+          if (gateInput) { gateInput.focus(); gateInput.select(); }
+        }
+      }).catch(function () {
+        showError('Something went wrong checking the password. Please try again.');
+      });
+    });
+  }
+
   /* ---------------- Photo carousel ----------------
      Centred and endless. The real slide set is cloned once on each side, so
      there is always material to the left and right; whenever scrolling settles
