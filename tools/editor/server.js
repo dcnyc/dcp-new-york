@@ -20,6 +20,10 @@ const { execFile } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const PORT = Number(process.env.EDITOR_PORT || 8787);
+/* Preview runs on its own port rather than a query flag. Relative links then
+   keep you inside preview as you click around, and the HTML is served exactly
+   as it sits on disk — no injected script, no rewritten hrefs. */
+const PREVIEW_PORT = Number(process.env.PREVIEW_PORT || PORT + 1);
 const CONFIG_FILE = path.join(ROOT, 'site.config.json');
 
 /* Folders that are never pages. */
@@ -657,6 +661,25 @@ async function handleApi(req, res, url, query) {
 
 /* ------------------------------------------------------------------ server */
 
+/* Resolves a request path to a file, or null. */
+function resolveFile(rawPath) {
+  let rel = decodeURIComponent(rawPath).replace(/^\/+/, '');
+  if (rel === '' || rel.endsWith('/')) rel += 'index.html';
+  let abs = path.join(ROOT, rel);
+  if (!abs.startsWith(ROOT)) return null;
+  if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) abs = path.join(abs, 'index.html');
+  return fs.existsSync(abs) ? abs : null;
+}
+
+function serveAsset(res, abs) {
+  res.writeHead(200, {
+    'Content-Type': TYPES[path.extname(abs)] || 'application/octet-stream',
+    'Cache-Control': 'no-store',
+  });
+  fs.createReadStream(abs).pipe(res);
+}
+
+/* ---- the editor ---- */
 http.createServer(async (req, res) => {
   try {
     const [rawPath, rawQuery] = req.url.split('?');
@@ -669,34 +692,53 @@ http.createServer(async (req, res) => {
       return send(res, 200, fs.readFileSync(file), TYPES[path.extname(file)]);
     }
 
-    let rel = decodeURIComponent(rawPath).replace(/^\/+/, '');
-    if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-    let abs = path.join(ROOT, rel);
-    if (!abs.startsWith(ROOT)) return send(res, 403, 'forbidden');
-    if (fs.existsSync(abs) && fs.statSync(abs).isDirectory()) abs = path.join(abs, 'index.html');
-    if (!fs.existsSync(abs)) return send(res, 404, 'Not found: ' + rel);
+    /* Anyone arriving with the old ?preview=1 flag is sent to the preview
+       server, so there is only ever one way to be in preview. */
+    if (query.get('preview')) {
+      res.writeHead(302, { Location: `http://127.0.0.1:${PREVIEW_PORT}${rawPath}` });
+      return res.end();
+    }
+
+    const abs = resolveFile(rawPath);
+    if (!abs) return send(res, 404, 'Not found: ' + rawPath);
 
     if (path.extname(abs) === '.html') {
       const pageRel = path.relative(ROOT, abs).replace(/\\/g, '/');
-      const html = fs.readFileSync(abs, 'utf8');
-      /* ?preview=1 serves the page exactly as it will be published. */
-      const out = query.get('preview') ? html : injectEditor(html, pageRel);
-      return send(res, 200, out, TYPES['.html']);
+      return send(res, 200, injectEditor(fs.readFileSync(abs, 'utf8'), pageRel), TYPES['.html']);
     }
-
-    res.writeHead(200, {
-      'Content-Type': TYPES[path.extname(abs)] || 'application/octet-stream',
-      'Cache-Control': 'no-store',
-    });
-    fs.createReadStream(abs).pipe(res);
+    serveAsset(res, abs);
   } catch (e) {
     send(res, 500, 'Editor error: ' + e.message);
   }
 }).listen(PORT, '127.0.0.1', () => {
   console.log('\n  DCP New York — visual editor');
   console.log('  ---------------------------------------------');
-  console.log('  http://127.0.0.1:' + PORT);
+  console.log('  Edit     http://127.0.0.1:' + PORT);
+  console.log('  Preview  http://127.0.0.1:' + PREVIEW_PORT + '   (no editor, as it will look live)');
   console.log('\n  Editing writes to the real files in this repo.');
   console.log('  Publish runs git add / commit / push.');
   console.log('  Stop with Ctrl+C.\n');
 });
+
+/* ---- preview: the site exactly as it sits on disk ---- */
+http.createServer((req, res) => {
+  try {
+    const rawPath = req.url.split('?')[0];
+
+    /* No editor surface at all on this port. */
+    if (rawPath.startsWith('/__editor')) return send(res, 404, 'Not found');
+
+    const abs = resolveFile(rawPath);
+    if (!abs) return send(res, 404, 'Not found: ' + rawPath);
+
+    if (path.extname(abs) === '.html') {
+      /* Served untouched: no injection, no rewritten links. Because preview
+         has its own origin, relative links keep you here as you click. */
+      res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
+      return res.end(fs.readFileSync(abs));
+    }
+    serveAsset(res, abs);
+  } catch (e) {
+    send(res, 500, 'Preview error: ' + e.message);
+  }
+}).listen(PREVIEW_PORT, '127.0.0.1');

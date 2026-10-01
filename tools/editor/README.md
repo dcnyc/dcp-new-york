@@ -9,6 +9,17 @@ node tools/editor/server.js
 
 Then open <http://127.0.0.1:8787>.
 
+It starts two servers:
+
+| Port | What it serves |
+| --- | --- |
+| 8787 | The site with the editing panel |
+| 8788 | **Preview** — the site exactly as it sits on disk |
+
+Preview has its own port rather than a query flag, so clicking around inside
+the preview tab keeps you in preview. The HTML there is served byte-for-byte
+as it will deploy: no injected script, no rewritten links, no panel.
+
 ## Why it can never leak onto the live site
 
 The editor is injected into the HTML **as it is served**, not written into the
@@ -44,7 +55,7 @@ strip, **Manage photos**, and the options for that block type.
 | Slider controls | Carousel panels → toggles the arrows under the strip. |
 | Reorder the menu | Drag a page in the **Site menu** group. Every page's header, overlay and footer menu updates. |
 | Add a page | **+ Add page** at the top of the list. Starts empty, as a draft. |
-| Preview | **Preview** in the footer opens the page in a new tab with no editor chrome. |
+| Preview | **Preview** in the footer opens the page on port 8788, with no editor chrome. |
 | Publish | Bottom of the panel. Runs git add / commit / push. |
 
 Every action that touches disk shows a labelled progress bar in the panel and a

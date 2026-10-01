@@ -1,7 +1,7 @@
 {
   "galleries": {
     "headshots": {
-      "columns": 3
+      "columns": 2
     },
     "portraits": {
       "showControls": true

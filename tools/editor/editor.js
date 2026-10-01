@@ -116,10 +116,13 @@
 
     var prev = el('button', 'ed-btn', 'Preview');
     prev.type = 'button';
-    prev.title = 'Open this page in a new tab with no editor chrome';
+    prev.title = 'Open this page as it will look live, in a new tab';
     prev.addEventListener('click', function () {
-      var u = location.pathname + (location.pathname.indexOf('?') > -1 ? '&' : '?') + 'preview=1';
-      window.open(u, '_blank', 'noopener');
+      /* Preview has its own port, so clicking around inside the preview tab
+         stays in preview instead of dropping back into the editor. */
+      var port = Number(location.port || 80) + 1;
+      window.open(location.protocol + '//' + location.hostname + ':' + port + location.pathname,
+                  'dcp-preview');
     });
     foot.appendChild(prev);
 
