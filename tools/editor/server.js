@@ -476,12 +476,25 @@ async function handleApi(req, res, url, query) {
     fs.writeFileSync(path.join(ROOT, 'assets/img', slug, '.gitkeep'),
       `Photos for the "${label}" page. Named NN-name.jpg; the number sets the order.\n`);
 
+    /* Hold the photos back. A draft page is not deployed, but everything
+       under assets/ is published wholesale, so without this its photos would
+       be reachable at their direct URLs the moment they were committed. The
+       rule is removed when the page is launched. */
+    const ignorePath = path.join(ROOT, '.gitignore');
+    const rule = `/assets/img/${slug}/*.jpg`;
+    let ignore = fs.existsSync(ignorePath) ? fs.readFileSync(ignorePath, 'utf8') : '';
+    if (!ignore.includes(rule)) {
+      ignore = ignore.replace(/\s*$/, '\n') +
+        `\n# Photos for the draft "${label}" page. Delete this line when it launches.\n${rule}\n`;
+      fs.writeFileSync(ignorePath, ignore, 'utf8');
+    }
+
     const cfg = readConfig();
     cfg.pages = cfg.pages || {};
     cfg.pages[`${slug}/index.html`] = { label };
     writeConfig(cfg);
 
-    return sendJson(res, 200, { ok: true, slug, url: `/${slug}/`, label });
+    return sendJson(res, 200, { ok: true, slug, url: `/${slug}/`, label, photosHeldBack: true });
   }
 
   if (route === 'gallery/reorder') {
