@@ -32,13 +32,15 @@ setting() {
 # $1 = prefix to site root ("" or "../"), $2 = active page key
 emit_header() {
   local P="$1" ACTIVE="$2" H="${1:-./}"
-  local a_home="" a_events="" a_ny="" a_contact="" a_client=""
+  # Menu order and labels come from tools/nav.js, which reads site.config.json,
+  # so the local editor can reorder the menu without touching this script.
+  local PAGE=""
   case "$ACTIVE" in
-    home) a_home=" is-active";;
-    events) a_events=" is-active";;
-    newyork) a_ny=" is-active";;
-    contact) a_contact=" is-active";;
-    client) a_client=" is-active";;
+    home) PAGE="index.html";;
+    events) PAGE="events/index.html";;
+    newyork) PAGE="newyork/index.html";;
+    contact) PAGE="contact/index.html";;
+    client) PAGE="client/index.html";;
   esac
   cat <<HDR
   <header class="site-header">
@@ -47,8 +49,7 @@ emit_header() {
         <button class="nav-toggle js-nav-toggle" type="button" aria-label="Open menu">
           <span></span><span></span><span></span>
         </button>
-        <a class="nav-link${a_home}" href="${H}">Portraits</a>
-        <a class="nav-link${a_events}" href="${P}events/">Event</a>
+$(node tools/nav.js header-left "$P" "$H" "$PAGE")
       </div>
 
       <a class="header-logo" href="${H}">
@@ -56,18 +57,14 @@ emit_header() {
       </a>
 
       <div class="nav-side nav-side--right">
-        <a class="nav-link${a_client}" href="${P}client/">Client</a>
-        <a class="nav-link${a_contact}" href="${P}contact/">Contact</a>
+$(node tools/nav.js header-right "$P" "$H" "$PAGE")
       </div>
     </nav>
   </header>
 
   <div class="overlay-menu js-overlay-menu">
     <button class="overlay-close js-overlay-close" type="button" aria-label="Close menu"></button>
-    <a class="${a_home:+is-active}" href="${H}">Portraits</a>
-    <a class="${a_events:+is-active}" href="${P}events/">Event</a>
-    <a class="${a_client:+is-active}" href="${P}client/">Client</a>
-    <a class="${a_contact:+is-active}" href="${P}contact/">Contact</a>
+$(node tools/nav.js overlay "$P" "$H" "$PAGE")
   </div>
 HDR
 }
@@ -75,22 +72,21 @@ HDR
 # ---- footer -------------------------------------------------------------
 emit_footer() {
   local P="$1" ACTIVE="$2" H="${1:-./}"
-  local a_home="" a_events="" a_ny="" a_contact="" a_client=""
+  # Menu order and labels come from tools/nav.js, which reads site.config.json,
+  # so the local editor can reorder the menu without touching this script.
+  local PAGE=""
   case "$ACTIVE" in
-    home) a_home=" is-active";;
-    events) a_events=" is-active";;
-    newyork) a_ny=" is-active";;
-    contact) a_contact=" is-active";;
-    client) a_client=" is-active";;
+    home) PAGE="index.html";;
+    events) PAGE="events/index.html";;
+    newyork) PAGE="newyork/index.html";;
+    contact) PAGE="contact/index.html";;
+    client) PAGE="client/index.html";;
   esac
   cat <<FTR
   <footer class="site-footer">
     <div class="footer__inner">
       <nav class="footer__menu" aria-label="Footer">
-        <a class="${a_home:+is-active}" href="${H}">Portraits</a>
-        <a class="${a_events:+is-active}" href="${P}events/">Event</a>
-        <a class="${a_client:+is-active}" href="${P}client/">Client</a>
-    <a class="${a_contact:+is-active}" href="${P}contact/">Contact</a>
+$(node tools/nav.js footer "$P" "$H" "$PAGE")
       </nav>
 
       <div class="footer__last">

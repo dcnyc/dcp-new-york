@@ -42,6 +42,7 @@ strip, **Manage photos**, and the options for that block type.
 | Rewrite text | Click any heading or paragraph and type. `Enter` saves, `Esc` cancels. |
 | Grid columns | Headshots panel → 2 / 3 / 4. Phones always show two. |
 | Slider controls | Carousel panels → toggles the arrows under the strip. |
+| Reorder the menu | Drag a page in the **Site menu** group. Every page's header, overlay and footer menu updates. |
 | Add a page | **+ Add page** at the top of the list. Starts empty, as a draft. |
 | Preview | **Preview** in the footer opens the page in a new tab with no editor chrome. |
 | Publish | Bottom of the panel. Runs git add / commit / push. |
@@ -59,6 +60,12 @@ Reordering renames the files so the numeric prefix matches the new order, then
 regenerates the markup: `tools/build.sh` for the three carousel galleries, and
 an in-place rewrite of the `headshot-grid` section for Headshots. **Filenames
 stay the single source of truth for gallery order.**
+
+Menu order lives in `site.config.json` under `nav`, and `tools/nav.js` renders
+it. `tools/build.sh` calls that module for the generated pages and the editor
+calls it for the hand-written ones, so there is one source of truth. A draft
+page cannot be dragged into the menu: it is not deployed, so the link would
+404 for every visitor.
 
 Block options are stored in `site.config.json` at the repo root, which
 `tools/build.sh` reads at build time. That is why a setting survives a rebuild

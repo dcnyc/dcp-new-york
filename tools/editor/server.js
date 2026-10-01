@@ -165,18 +165,49 @@ function publishedSet() {
   } catch (_) { return null; }
 }
 
-function menuSet() {
-  try {
-    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-    const nav = html.slice(html.indexOf('<nav class="header-nav"'), html.indexOf('</nav>'));
-    const out = new Set();
-    for (const m of nav.matchAll(/href="([^"]*)"/g)) {
-      const h = m[1];
-      if (h === './' || h === '' || h === '/') out.add('index.html');
-      else out.add(h.replace(/^\.\//, '').replace(/\/$/, '') + '/index.html');
-    }
-    return out;
-  } catch (_) { return new Set(); }
+const NAV = require(path.join(ROOT, 'tools', 'nav.js'));
+
+const navOrder = () => NAV.navItems().map(i => i.path);
+const menuSet = () => new Set(navOrder());
+
+/* Rewrites the four menus inside a hand-written page. The generated pages get
+   theirs from tools/build.sh, which calls the same module. */
+function applyNavToPage(rel) {
+  const abs = path.join(ROOT, rel);
+  if (!fs.existsSync(abs)) return;
+
+  const slug = rel === 'index.html' ? '' : rel.split('/')[0];
+  const prefix = slug ? '../' : '';
+  const home = slug ? '../' : './';
+  let html = fs.readFileSync(abs, 'utf8');
+
+  html = html.replace(
+    /(<div class="nav-side nav-side--left">[\s\S]*?<\/button>\n)[\s\S]*?(\n[ \t]*<\/div>)/,
+    (_m, head, tail) => head + NAV.emit('header-left', prefix, home, rel) + tail);
+
+  html = html.replace(
+    /(<div class="nav-side nav-side--right">\n)[\s\S]*?(\n[ \t]*<\/div>)/,
+    (_m, head, tail) => head + NAV.emit('header-right', prefix, home, rel) + tail);
+
+  html = html.replace(
+    /(<button class="overlay-close[^>]*><\/button>\n)[\s\S]*?(\n[ \t]*<\/div>)/,
+    (_m, head, tail) => head + NAV.emit('overlay', prefix, home, rel) + tail);
+
+  html = html.replace(
+    /(<nav class="footer__menu"[^>]*>\n)[\s\S]*?(\n[ \t]*<\/nav>)/,
+    (_m, head, tail) => head + NAV.emit('footer', prefix, home, rel) + tail);
+
+  fs.writeFileSync(abs, html, 'utf8');
+}
+
+/* Push the current menu into every page: build.sh for the generated ones,
+   a direct rewrite for the rest. */
+async function applyNavEverywhere() {
+  const built = await run('bash', ['tools/build.sh']);
+  discoverPages()
+    .filter(p => !p.builtByScript)
+    .forEach(p => applyNavToPage(p.path));
+  return built;
 }
 
 /* ---------------------------------------------------- markup regeneration */
@@ -405,15 +436,23 @@ async function handleApi(req, res, url, query) {
 
   if (route === 'pages') {
     const published = publishedSet();
-    const inMenu = menuSet();
-    return sendJson(res, 200, {
-      pages: discoverPages().map(p => ({
-        path: p.path, url: p.url, label: p.label, gallery: p.gallery, type: p.type,
-        photos: p.gallery ? listGallery(p.gallery).length : 0,
-        inMenu: inMenu.has(p.path),
-        published: published ? published.has(p.slug || 'index.html') : true,
-      })),
-    });
+    const order = navOrder();
+    const inMenu = new Set(order);
+
+    /* Menu pages come back in menu order, not alphabetically, so the list
+       mirrors what a visitor sees. The rest follow, alphabetically. */
+    const all = discoverPages().map(p => ({
+      path: p.path, url: p.url, label: p.label, gallery: p.gallery, type: p.type,
+      photos: p.gallery ? listGallery(p.gallery).length : 0,
+      inMenu: inMenu.has(p.path),
+      published: published ? published.has(p.slug || 'index.html') : true,
+    }));
+
+    const menu = order.map(pp => all.find(p => p.path === pp)).filter(Boolean);
+    const rest = all.filter(p => !inMenu.has(p.path))
+                    .sort((a, b) => a.label.localeCompare(b.label));
+
+    return sendJson(res, 200, { pages: menu.concat(rest), nav: order });
   }
 
   if (route === 'settings' && req.method === 'GET') {
@@ -461,6 +500,43 @@ async function handleApi(req, res, url, query) {
   }
 
   const body = JSON.parse((await readBody(req)).toString('utf8') || '{}');
+
+  /* ---- reorder the site menu ---- */
+  if (route === 'nav') {
+    const order = Array.isArray(body.order) ? body.order : null;
+    if (!order) return sendJson(res, 400, { error: 'an order is required' });
+
+    const known = new Set(discoverPages().map(p => p.path));
+    const bad = order.filter(p => !known.has(p));
+    if (bad.length) return sendJson(res, 400, { error: 'unknown page: ' + bad[0] });
+
+    /* A page that is not deployed must not be linked, or the live site gets a
+       menu item that 404s for every visitor. */
+    const published = publishedSet();
+    if (published) {
+      const draft = order.find(p => {
+        const page = discoverPages().find(x => x.path === p);
+        return page && !published.has(page.slug || 'index.html');
+      });
+      if (draft) {
+        const label = discoverPages().find(x => x.path === draft).label;
+        return sendJson(res, 400, {
+          error: `"${label}" is a draft and is not on the live site, so it cannot go in the menu yet. ` +
+                 `Add it to the PUBLISH list in .github/workflows/pages.yml first.`,
+        });
+      }
+    }
+    if (!order.includes('index.html')) {
+      return sendJson(res, 400, { error: 'the home page has to stay in the menu' });
+    }
+
+    const cfg = readConfig();
+    cfg.nav = order;
+    writeConfig(cfg);
+
+    const built = await applyNavEverywhere();
+    return sendJson(res, 200, { ok: true, nav: order, rebuild: built.ok });
+  }
 
   if (route === 'pages/create') {
     const label = String(body.label || '').trim();

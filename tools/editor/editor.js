@@ -163,14 +163,17 @@
       var inMenu = r.pages.filter(function (p) { return p.inMenu; });
       var hidden = r.pages.filter(function (p) { return !p.inMenu; });
 
-      if (inMenu.length) {
-        body.appendChild(el('div', 'ed-sec', 'Site menu'));
-        inMenu.forEach(function (p) { body.appendChild(pageRow(p)); });
-      }
-      if (hidden.length) {
-        body.appendChild(el('div', 'ed-sec', 'Not in menu'));
-        hidden.forEach(function (p) { body.appendChild(pageRow(p)); });
-      }
+      body.appendChild(el('div', 'ed-sec', 'Site menu'));
+      var menuList = el('div', 'ed-list ed-list--menu');
+      inMenu.forEach(function (p) { menuList.appendChild(pageRow(p)); });
+      body.appendChild(menuList);
+      wirePageDrag(menuList);
+
+      body.appendChild(el('div', 'ed-sec', 'Not in menu'));
+      var restList = el('div', 'ed-list ed-list--rest');
+      hidden.forEach(function (p) { restList.appendChild(pageRow(p)); });
+      body.appendChild(restList);
+      wirePageDrag(restList);
 
       body.appendChild(el('div', 'ed-note',
         '<b>Draft pages</b>These exist in the repository but are left out of the ' +
@@ -181,9 +184,79 @@
     });
   }
 
+  /* --------------------------------------------- drag pages to reorder */
+
+  function wirePageDrag(list) {
+    list.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      var dragging = document.querySelector('.ed-row.ed-dragging');
+      if (!dragging) return;
+
+      /* A draft page is not on the live site, so linking it would put a menu
+         item on the site that 404s. Refuse the drop rather than allow it. */
+      if (list.classList.contains('ed-list--menu') && dragging.dataset.published === 'false') {
+        list.classList.add('ed-list--refuse');
+        return;
+      }
+      list.classList.add('ed-list--target');
+
+      var after = null;
+      Array.prototype.slice.call(list.querySelectorAll('.ed-row:not(.ed-dragging)')).forEach(function (row) {
+        var r = row.getBoundingClientRect();
+        if (e.clientY > r.top + r.height / 2) after = row;
+      });
+      list.insertBefore(dragging, after ? after.nextSibling : list.firstChild);
+    });
+
+    ['dragleave', 'drop'].forEach(function (ev) {
+      list.addEventListener(ev, function (e) {
+        if (ev === 'drop') e.preventDefault();
+        list.classList.remove('ed-list--target', 'ed-list--refuse');
+      });
+    });
+  }
+
+  function commitNav() {
+    var list = body.querySelector('.ed-list--menu');
+    if (!list) return;
+    var order = Array.prototype.slice.call(list.querySelectorAll('.ed-row'))
+      .map(function (r) { return r.dataset.path; });
+
+    busy('Updating site menu…');
+    api('nav', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order: order }),
+    }).then(function () {
+      busyDone();
+      toast('Menu updated', 'ok');
+      refreshStatus();
+      showPages();
+    }).catch(function (e) {
+      busyDone();
+      toast(e.message, 'err');
+      showPages();
+    });
+  }
+
   function pageRow(p) {
     var row = el('button', 'ed-row');
     row.type = 'button';
+    row.draggable = true;
+    row.dataset.path = p.path;
+    row.dataset.published = String(p.published);
+
+    row.addEventListener('dragstart', function (e) {
+      row.classList.add('ed-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', p.path); } catch (_) {}
+    });
+    row.addEventListener('dragend', function () {
+      row.classList.remove('ed-dragging');
+      document.querySelectorAll('.ed-list--target,.ed-list--refuse')
+        .forEach(function (n) { n.classList.remove('ed-list--target', 'ed-list--refuse'); });
+      commitNav();
+    });
     if (p.url === location.pathname || (p.url === '/' && location.pathname === '/index.html')) {
       row.classList.add('is-current');
     }

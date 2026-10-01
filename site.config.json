@@ -11,5 +11,11 @@
     "real-estate/index.html": {
       "label": "Real Estate"
     }
-  }
+  },
+  "nav": [
+    "index.html",
+    "events/index.html",
+    "client/index.html",
+    "contact/index.html"
+  ]
 }

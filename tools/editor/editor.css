@@ -98,13 +98,21 @@ body.ed-busy-on::before{
   padding:16px 16px 6px;font-size:10px;font-weight:700;
   letter-spacing:.1em;text-transform:uppercase;color:#9aa0a6;
 }
+/* Lists are drop targets; the rows inside them drag. */
+.ed-list{min-height:10px;border-radius:6px;transition:background .15s ease,box-shadow .15s ease}
+.ed-list--menu{min-height:38px}
+.ed-list--target{background:#eef7f4;box-shadow:inset 0 0 0 1px #bfe3d8}
+.ed-list--refuse{background:#fdeeee;box-shadow:inset 0 0 0 1px #f3c9c9;cursor:not-allowed}
+
 .ed-row{
   display:flex;align-items:center;gap:10px;width:100%;
   padding:9px 16px;border:0;background:none;cursor:pointer;text-align:left;
   font:inherit;color:var(--ed-ink);
-  transition:background .12s ease;
+  transition:background .12s ease,opacity .12s ease;
 }
 .ed-row:hover{background:#f4f5f6}
+.ed-row:active{cursor:grabbing}
+.ed-row.ed-dragging{opacity:.4;background:#eef2f5}
 .ed-row.is-current{background:#eef2f5;font-weight:600}
 .ed-row__ico{width:16px;flex-shrink:0;opacity:.5}
 .ed-row__label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
