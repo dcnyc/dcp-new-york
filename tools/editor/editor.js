@@ -20,6 +20,54 @@
 
   var toasts = el('div', 'ed-toasts');
 
+  /* ---------------------------------------------------------- busy state */
+  /* Every call that touches disk shows a bar and a label, because some of
+     them (resizing a dozen photos) take several seconds and silence reads
+     as the page being broken. */
+  var busyEl, busyBar, busyText, busyDepth = 0;
+
+  function buildBusy() {
+    busyEl = el('div', 'ed-busy');
+    busyEl.hidden = true;
+    busyBar = el('div', 'ed-busy__bar');
+    var fill = el('div', 'ed-busy__fill');
+    busyBar.appendChild(fill);
+    busyText = el('div', 'ed-busy__text', '');
+    busyEl.appendChild(busyText);
+    busyEl.appendChild(busyBar);
+    busyEl._fill = fill;
+    return busyEl;
+  }
+
+  function busy(label, pct) {
+    busyDepth++;
+    busyEl.hidden = false;
+    busyText.textContent = label;
+    busyEl._fill.style.width = (pct === undefined ? 100 : pct) + '%';
+    busyEl._fill.classList.toggle('is-indeterminate', pct === undefined);
+    document.body.classList.add('ed-busy-on');
+  }
+
+  function busyUpdate(label, pct) {
+    if (busyEl.hidden) return;
+    if (label) busyText.textContent = label;
+    if (pct !== undefined) {
+      busyEl._fill.classList.remove('is-indeterminate');
+      busyEl._fill.style.width = pct + '%';
+    }
+  }
+
+  function busyDone() {
+    busyDepth = Math.max(0, busyDepth - 1);
+    if (busyDepth) return;
+    busyEl._fill.style.width = '100%';
+    setTimeout(function () {
+      if (busyDepth) return;
+      busyEl.hidden = true;
+      document.body.classList.remove('ed-busy-on');
+    }, 320);
+  }
+
   function toast(msg, kind) {
     var t = el('div', 'ed-toast' + (kind ? ' ed-toast--' + kind : ''), msg);
     toasts.appendChild(t);
@@ -60,9 +108,21 @@
     body = el('div', 'ed-body');
     panel.appendChild(body);
 
+    panel.appendChild(buildBusy());
+
     var foot = el('div', 'ed-foot');
     footStatus = el('div', 'ed-row__meta');
     foot.appendChild(footStatus);
+
+    var prev = el('button', 'ed-btn', 'Preview');
+    prev.type = 'button';
+    prev.title = 'Open this page in a new tab with no editor chrome';
+    prev.addEventListener('click', function () {
+      var u = location.pathname + (location.pathname.indexOf('?') > -1 ? '&' : '?') + 'preview=1';
+      window.open(u, '_blank', 'noopener');
+    });
+    foot.appendChild(prev);
+
     var pub = el('button', 'ed-btn ed-btn--primary', 'Publish');
     pub.type = 'button';
     pub.addEventListener('click', openPublish);
@@ -89,11 +149,12 @@
   function showPages() {
     body.innerHTML = '';
 
-    var head = el('div', 'ed-sec');
-    head.style.display = 'flex';
-    head.style.justifyContent = 'space-between';
-    head.style.alignItems = 'center';
-    head.innerHTML = '<span>Pages</span>';
+    var head = el('div', 'ed-pages-head');
+    head.appendChild(el('span', 'ed-pages-head__t', 'Pages'));
+    var add = el('button', 'ed-add', '<span>+</span> Add page');
+    add.type = 'button';
+    add.addEventListener('click', openAddPage);
+    head.appendChild(add);
     body.appendChild(head);
 
     api('pages').then(function (r) {
@@ -257,11 +318,13 @@
   }
 
   function saveSettings(p, patch) {
+    busy('Applying setting2026');
     api('settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gallery: p.gallery, settings: patch }),
     }).then(function () {
+      busyUpdate('Rebuilding2026');
       toast('Setting saved', 'ok');
       sessionStorage.setItem('ed-open', p.path);
       setTimeout(function () { location.reload(); }, 500);
@@ -371,6 +434,7 @@
         .map(fileOf).filter(Boolean);
       if (!order.length) return;
 
+      busy('Saving order2026');
       api('gallery/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -383,11 +447,13 @@
   function removePhoto(file) {
     if (!file) return;
     if (!confirm('Remove ' + file + ' from this gallery?\n\nA copy is kept in .originals/removed/.')) return;
+    busy('Removing photo2026');
     api('gallery/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gallery: CFG.gallery, file: file }),
     }).then(function (r) {
+      busyUpdate('Rebuilding2026');
       toast('Removed. ' + r.remaining + ' photos left.', 'ok');
       sessionStorage.setItem('ed-open', CFG.page);
       setTimeout(function () { location.reload(); }, 600);
@@ -420,16 +486,36 @@
     });
   }
 
+  /* Uploads run one at a time with visible progress, then a single finalize
+     pass resizes and rebuilds. Doing the heavy work once at the end is what
+     makes adding a dozen photos take seconds rather than a minute. */
   function uploadQueue(files) {
-    toast('Adding ' + files.length + ' photo' + (files.length === 1 ? '' : 's') + '…');
-    var done = 0;
+    var done = 0, failed = 0;
+    busy('Adding photo 1 of ' + files.length, 0);
+
     (function next(i) {
       if (i >= files.length) {
-        toast('Added ' + done + ' photo' + (done === 1 ? '' : 's'), 'ok');
-        sessionStorage.setItem('ed-open', CFG.page);
-        setTimeout(function () { location.reload(); }, 700);
+        busyUpdate('Optimising ' + done + ' photo' + (done === 1 ? '' : 's') + '…');
+        api('gallery/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gallery: CFG.gallery }),
+        }).then(function () {
+          busyUpdate('Rebuilding page…', 100);
+          toast('Added ' + done + ' photo' + (done === 1 ? '' : 's') +
+                (failed ? ', ' + failed + ' skipped' : ''), failed ? 'err' : 'ok');
+          sessionStorage.setItem('ed-open', CFG.page);
+          setTimeout(function () { busyDone(); location.reload(); }, 500);
+        }).catch(function (e) {
+          busyDone();
+          toast('Photos were added but the rebuild failed: ' + e.message, 'err');
+        });
         return;
       }
+
+      busyUpdate('Adding photo ' + (i + 1) + ' of ' + files.length,
+                 Math.round((i / files.length) * 90));
+
       files[i].arrayBuffer().then(function (buf) {
         return fetch(API + 'gallery/upload', {
           method: 'POST',
@@ -441,10 +527,77 @@
           body: buf,
         }).then(function (r) { return r.json(); });
       }).then(function (j) {
-        if (j.error) toast(j.error, 'err'); else done++;
+        if (j.error) { failed++; toast(j.error, 'err'); } else done++;
         next(i + 1);
-      }).catch(function (e) { toast(e.message, 'err'); next(i + 1); });
+      }).catch(function (e) { failed++; toast(e.message, 'err'); next(i + 1); });
     })(0);
+  }
+
+  /* -------------------------------------------------------------- add page */
+
+  function openAddPage() {
+    var modal = el('div', 'ed-modal');
+    modal.innerHTML =
+      '<div class="ed-modal__box">' +
+      '  <div class="ed-modal__head">Add a page</div>' +
+      '  <div class="ed-modal__body">' +
+      '    <p>Creates an empty gallery page built from the same template as Portraits, with its own photo folder.</p>' +
+      '    <input type="text" class="ed-name" placeholder="Page name, e.g. Weddings">' +
+      '    <div class="ed-opt__hint ed-slug"></div>' +
+      '    <div class="ed-note" style="margin:14px 0 0">' +
+      '      <b>It starts as a draft</b>The page is left out of the deploy allowlist and the ' +
+      '      menus, so publishing will not put it on the live site until you add it deliberately.' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="ed-modal__foot">' +
+      '    <button class="ed-btn ed-cancel" type="button">Cancel</button>' +
+      '    <button class="ed-btn ed-btn--primary ed-go" type="button" style="flex:0 0 auto">Create page</button>' +
+      '  </div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    var input = modal.querySelector('.ed-name');
+    var slugEl = modal.querySelector('.ed-slug');
+    var go = modal.querySelector('.ed-go');
+    input.focus();
+
+    function slugify(s) {
+      return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    }
+    function sync() {
+      var s = slugify(input.value);
+      slugEl.textContent = s ? 'Address: /' + s + '/' : '';
+    }
+    input.addEventListener('input', sync);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') go.click(); });
+
+    modal.querySelector('.ed-cancel').addEventListener('click', function () { modal.remove(); });
+    modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
+
+    go.addEventListener('click', function () {
+      var label = input.value.trim();
+      if (!label) { input.focus(); return; }
+      go.disabled = true;
+      go.textContent = 'Creating…';
+      busy('Creating page…');
+
+      api('pages/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: label }),
+      }).then(function (r) {
+        busyDone();
+        modal.remove();
+        toast('Created ' + r.label, 'ok');
+        sessionStorage.setItem('ed-open', r.slug + '/index.html');
+        location.href = r.url;
+      }).catch(function (e) {
+        busyDone();
+        go.disabled = false;
+        go.textContent = 'Create page';
+        toast(e.message, 'err');
+      });
+    });
   }
 
   /* ------------------------------------------------------------ text edits */
@@ -458,15 +611,18 @@
       node.addEventListener('blur', function () {
         var text = node.textContent.replace(/\s+/g, ' ').trim();
         if (text === (node.dataset.edOriginal || '').replace(/\s+/g, ' ').trim()) return;
+        busy('Saving text2026');
         api('text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ page: CFG.page, index: Number(node.dataset.ed), text: text }),
         }).then(function () {
+          busyDone();
           node.dataset.edOriginal = text;
           toast('Text saved', 'ok');
           refreshStatus();
         }).catch(function (e) {
+          busyDone();
           toast(e.message, 'err');
           node.textContent = node.dataset.edOriginal;
         });

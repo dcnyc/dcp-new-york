@@ -42,7 +42,13 @@ strip, **Manage photos**, and the options for that block type.
 | Rewrite text | Click any heading or paragraph and type. `Enter` saves, `Esc` cancels. |
 | Grid columns | Headshots panel → 2 / 3 / 4. Phones always show two. |
 | Slider controls | Carousel panels → toggles the arrows under the strip. |
+| Add a page | **+ Add page** at the top of the list. Starts empty, as a draft. |
+| Preview | **Preview** in the footer opens the page in a new tab with no editor chrome. |
 | Publish | Bottom of the panel. Runs git add / commit / push. |
+
+Every action that touches disk shows a labelled progress bar in the panel and a
+sweep across the top of the page. Adding photos reports `Adding photo 3 of 12`,
+then `Optimising`, then `Rebuilding`.
 
 Dropped photos are downscaled by `tools/resize-images.ps1` — the same 1600px
 cap used everywhere else on the site.
