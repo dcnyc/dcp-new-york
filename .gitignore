@@ -21,3 +21,12 @@ Desktop.ini
 /Sophie-Xuefei-Zhang-Pianist-1-*.jpg
 /Sophie-Xuefei-Zhang-Pianist-3-*.jpg
 /Will-Healy-Composer-1-*.jpg
+.originals/
+
+# ---------------------------------------------------------------------------
+# Headshot photos are held back until the Headshots page is launched.
+# Anything under assets/ is published wholesale, so committing these would put
+# them on the public web even with the page unlinked.
+# DELETE THESE TWO LINES when you are ready to publish the Headshots page.
+# ---------------------------------------------------------------------------
+/assets/img/headshots/headshot-*.jpg
