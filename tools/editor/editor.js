@@ -92,7 +92,7 @@
 
   /* ---------------------------------------------------------------- panel */
 
-  var panel, body, footStatus;
+  var panel, body, publishBtn;
 
   function buildPanel() {
     panel = el('div', 'ed-panel');
@@ -111,10 +111,8 @@
     panel.appendChild(buildBusy());
 
     var foot = el('div', 'ed-foot');
-    footStatus = el('div', 'ed-row__meta');
-    foot.appendChild(footStatus);
 
-    var prev = el('button', 'ed-btn', 'Preview');
+    var prev = el('button', 'ed-btn ed-btn--preview', 'Preview');
     prev.type = 'button';
     prev.title = 'Open this page as it will look live, in a new tab';
     prev.addEventListener('click', function () {
@@ -126,10 +124,13 @@
     });
     foot.appendChild(prev);
 
-    var pub = el('button', 'ed-btn ed-btn--primary', 'Publish');
-    pub.type = 'button';
-    pub.addEventListener('click', openPublish);
-    foot.appendChild(pub);
+    publishBtn = el('button', 'ed-btn ed-btn--primary ed-btn--publish', 'Publish');
+    publishBtn.type = 'button';
+    /* A red dot rather than a line of text: it says "there is something to
+       publish" without taking up a row. */
+    publishBtn.appendChild(el('span', 'ed-pub-dot'));
+    publishBtn.addEventListener('click', openPublish);
+    foot.appendChild(publishBtn);
     panel.appendChild(foot);
 
     document.body.appendChild(panel);
@@ -140,11 +141,18 @@
   function refreshStatus() {
     return api('status').then(function (s) {
       state.status = s;
+      var pending = (s.changedCount || 0) + (s.unpushed || 0);
+      publishBtn.classList.toggle('has-changes', pending > 0);
+
+      /* The count still exists, just as a tooltip rather than a line of text. */
       var bits = [];
-      if (s.changedCount) bits.push(s.changedCount + ' unsaved');
-      if (s.unpushed) bits.push(s.unpushed + ' to push');
-      footStatus.textContent = bits.length ? bits.join(' · ') : 'Up to date';
-    }).catch(function () { footStatus.textContent = ''; });
+      if (s.changedCount) bits.push(s.changedCount + ' unsaved change' + (s.changedCount === 1 ? '' : 's'));
+      if (s.unpushed) bits.push(s.unpushed + ' commit' + (s.unpushed === 1 ? '' : 's') + ' waiting to push');
+      publishBtn.title = bits.length ? bits.join(', ') : 'Everything is published';
+    }).catch(function () {
+      publishBtn.classList.remove('has-changes');
+      publishBtn.title = '';
+    });
   }
 
   /* ------------------------------------------------------------ view: pages */

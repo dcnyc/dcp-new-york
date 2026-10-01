@@ -35,7 +35,9 @@ body.ed-active{margin-left:var(--ed-w)}
 
 .ed-foot{
   border-top:1px solid var(--ed-line);
-  padding:12px 14px;display:flex;gap:8px;align-items:center;
+  padding:12px 14px;display:flex;gap:10px;align-items:center;
+  /* the publish dot sits slightly outside its button */
+  overflow:visible;
 }
 
 /* ================================================================ buttons */
@@ -49,6 +51,22 @@ body.ed-active{margin-left:var(--ed-w)}
 .ed-btn[disabled]{opacity:.45;cursor:not-allowed}
 .ed-btn--primary{background:var(--ed-accent);border-color:var(--ed-accent);color:#fff;font-weight:600;flex:1}
 .ed-btn--primary:hover{background:#0d8b6c}
+
+/* Footer pair: Preview keeps its natural width, Publish takes the rest. */
+.ed-btn--preview{flex:0 0 auto;padding:9px 22px}
+.ed-btn--publish{position:relative;overflow:visible}
+
+/* Red dot = there is something not yet on the live site. The white ring keeps
+   it legible against the green button. */
+.ed-pub-dot{
+  position:absolute;top:-5px;right:-5px;
+  width:12px;height:12px;border-radius:50%;
+  background:var(--ed-danger);border:2px solid #fff;
+  opacity:0;transform:scale(.6);
+  transition:opacity .18s ease,transform .18s ease;
+  pointer-events:none;
+}
+.ed-btn--publish.has-changes .ed-pub-dot{opacity:1;transform:scale(1)}
 .ed-btn--wide{width:100%;text-align:center}
 .ed-btn--ghost{background:#fff}
 .ed-dot{width:8px;height:8px;border-radius:50%;background:var(--ed-danger);display:inline-block;margin-left:6px;vertical-align:middle}
