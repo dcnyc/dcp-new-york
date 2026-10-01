@@ -241,28 +241,105 @@ body.menu-open{overflow:hidden}
 }
 
 /* ==========================================================================
-   Intro block — copy above a gallery (Headshots)
+   Page heading + headshot grid
    ========================================================================== */
-.intro{
-  max-width:680px;
-  margin-left:auto;margin-right:auto;
-  padding:8px var(--block-edge-space-x) 44px;
+.page-head{
+  max-width:var(--max-page-width);margin:0 auto;
+  padding:6px var(--block-edge-space-x) 30px;
   text-align:center;
 }
-.intro__eyebrow{margin-bottom:20px;color:var(--primary-paragraphs)}
-.intro__title{
+.page-head__title{
   font-size:min(2.5rem,calc(1rem + 1.67vw));
   line-height:1.1em;letter-spacing:-.01em;
-  margin-bottom:22px;
 }
-/* Ragged-right: centred text is hard to read past a couple of lines. */
-.intro__text{text-align:left;color:var(--primary-paragraphs)}
-.intro__text p + p{margin-top:1.15em}
-.intro__action{margin-top:30px}
+
+/* A uniform square grid rather than the filmstrip used elsewhere. Headshots
+   are all the same kind of picture, and a grid lets someone scan a lot of
+   faces at once, which is what this page is for. Square cells match the
+   native ratio of most of the photographs, so they crop least. */
+.headshot-grid{
+  max-width:var(--max-page-width);margin:0 auto;
+  padding:0 var(--block-edge-space-x) 90px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+/* Cells are buttons so they are keyboard-reachable and announce themselves,
+   but they carry none of a button's chrome. */
+.headshot-cell{
+  display:block;padding:0;border:0;margin:0;
+  aspect-ratio:1/1;overflow:hidden;
+  background:var(--accent-background);
+  cursor:zoom-in;
+}
+.headshot-cell img{
+  width:100%;height:100%;object-fit:cover;
+  transition:opacity .3s ease;
+}
+.headshot-cell:hover img{opacity:.88}
+.headshot-cell:focus{outline:none}
+.headshot-cell:focus-visible{outline:2px solid var(--primary-headings);outline-offset:3px}
+
+/* ---------- Full-size viewer ---------- */
+.lightbox{
+  position:fixed;inset:0;z-index:300;
+  display:flex;align-items:center;justify-content:center;
+  padding:5vmin;
+  background:var(--accent-background);
+  cursor:zoom-out;
+}
+.lightbox[hidden]{display:none}
+.lightbox__img{
+  max-width:100%;max-height:100%;
+  width:auto;height:auto;
+  object-fit:contain;
+  cursor:default;
+  box-shadow:0 2px 40px rgba(0,0,0,.10);
+}
+.lightbox__close{
+  position:absolute;top:22px;right:22px;
+  width:30px;height:30px;color:var(--primary-headings);
+  transition:opacity .25s ease;
+}
+.lightbox__close::before,.lightbox__close::after{
+  content:"";position:absolute;top:14px;left:2px;
+  width:26px;height:1px;background:currentColor;
+}
+.lightbox__close::before{transform:rotate(45deg)}
+.lightbox__close::after{transform:rotate(-45deg)}
+.lightbox__close:hover{opacity:.5}
+.lightbox__arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  padding:20px;color:var(--primary-headings);
+  transition:opacity .25s ease;
+}
+.lightbox__arrow svg{display:block;width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.2}
+.lightbox__arrow:hover{opacity:.5}
+.lightbox__arrow--prev{left:6px}
+.lightbox__arrow--next{right:6px}
+.lightbox__count{
+  position:absolute;bottom:20px;left:0;right:0;text-align:center;
+  font-family:var(--sans);font-weight:500;
+  font-size:min(.75rem,calc(1rem - .28vw));
+  letter-spacing:.2em;color:var(--primary-paragraphs);
+}
+.lightbox :focus{outline:none}
+.lightbox :focus-visible{outline:2px solid var(--primary-headings);outline-offset:2px}
 
 @media screen and (max-width:767px){
-  .intro{padding:4px var(--block-edge-space-x) 32px}
-  .intro__action{margin-top:26px}
+  .lightbox{padding:16px}
+  .lightbox__arrow{padding:14px}
+  .lightbox__arrow--prev{left:0}
+  .lightbox__arrow--next{right:0}
+  .lightbox__close{top:14px;right:14px}
+}
+
+@media screen and (max-width:991px){
+  .headshot-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media screen and (max-width:767px){
+  .page-head{padding:4px var(--block-edge-space-x) 22px}
+  .headshot-grid{gap:8px;padding-bottom:64px}
 }
 
 /* ==========================================================================

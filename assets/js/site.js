@@ -80,6 +80,74 @@
     });
   }
 
+  /* ---------------- Full-size photo viewer (Headshots grid) ----------------
+     Clicking a grid cell opens the photo on its own. Close with the X, the
+     Escape key, or by clicking the surround; move with the arrows or the
+     left/right keys. Focus is moved into the viewer and restored to the cell
+     that opened it, so keyboard users do not lose their place. */
+  var lb = document.querySelector('.js-lb');
+  var lbCells = Array.prototype.slice.call(document.querySelectorAll('.js-lb-open'));
+
+  if (lb && lbCells.length) {
+    var lbImg = lb.querySelector('.js-lb-img');
+    var lbCount = lb.querySelector('.js-lb-count');
+    var lbClose = lb.querySelector('.js-lb-close');
+    var lbPrev = lb.querySelector('.js-lb-prev');
+    var lbNext = lb.querySelector('.js-lb-next');
+    var lbIndex = 0;
+    var lbOpener = null;
+
+    function lbShow(i) {
+      lbIndex = (i + lbCells.length) % lbCells.length;
+      var source = lbCells[lbIndex].querySelector('img');
+      lbImg.src = source.currentSrc || source.src;
+      lbImg.alt = source.alt || '';
+      if (lbCount) lbCount.textContent = (lbIndex + 1) + ' / ' + lbCells.length;
+    }
+
+    function lbOpen(i, opener) {
+      lbOpener = opener || null;
+      lbShow(i);
+      lb.hidden = false;
+      document.body.classList.add('menu-open');   // reuse the scroll lock
+      lbClose.focus();
+    }
+
+    function lbHide() {
+      lb.hidden = true;
+      lbImg.src = '';
+      document.body.classList.remove('menu-open');
+      if (lbOpener) { lbOpener.focus(); lbOpener = null; }
+    }
+
+    lbCells.forEach(function (cell, i) {
+      cell.addEventListener('click', function () { lbOpen(i, cell); });
+    });
+
+    lbClose.addEventListener('click', lbHide);
+    lbPrev.addEventListener('click', function () { lbShow(lbIndex - 1); });
+    lbNext.addEventListener('click', function () { lbShow(lbIndex + 1); });
+
+    /* Clicking the surround closes; clicking the photo itself does not. */
+    lb.addEventListener('click', function (e) {
+      if (e.target === lb) lbHide();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (lb.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); lbHide(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); lbShow(lbIndex + 1); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); lbShow(lbIndex - 1); }
+      /* Keep Tab inside the viewer while it is open. */
+      if (e.key === 'Tab') {
+        var focusable = lb.querySelectorAll('button');
+        var first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    });
+  }
+
   /* ---------------- Client-area password gate ----------------
      A deterrent, not security: this runs in the browser, and the destination
      is a public URL. Only the SHA-256 of the password is stored, so the
