@@ -37,6 +37,57 @@ const GALLERIES = {
 const PAGE_TO_GALLERY = {};
 for (const [name, g] of Object.entries(GALLERIES)) PAGE_TO_GALLERY[g.page] = name;
 
+/* Every page the editor knows about, in the order they should be listed. */
+const PAGES = [
+  { path: 'index.html',           url: '/',           label: 'Portraits', gallery: 'portraits' },
+  { path: 'events/index.html',    url: '/events/',    label: 'Event',     gallery: 'events'    },
+  { path: 'newyork/index.html',   url: '/newyork/',   label: 'New York',  gallery: 'newyork'   },
+  { path: 'headshots/index.html', url: '/headshots/', label: 'Headshots', gallery: 'headshots' },
+  { path: 'contact/index.html',   url: '/contact/',   label: 'Contact',   gallery: null        },
+  { path: 'client/index.html',    url: '/client/',    label: 'Client',    gallery: null        },
+];
+
+const CONFIG_FILE = path.join(ROOT, 'site.config.json');
+
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
+  catch (_) { return { galleries: {} }; }
+}
+function writeConfig(cfg) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2) + '\n', 'utf8');
+}
+function gallerySettings(name) {
+  const cfg = readConfig();
+  const defaults = GALLERIES[name].type === 'grid' ? { columns: 3 } : { showControls: true };
+  return Object.assign(defaults, (cfg.galleries || {})[name] || {});
+}
+
+/* Which page folders the deploy workflow actually uploads. Anything missing
+   from that list is a draft: it exists in the repo but not on the web. */
+function publishedSet() {
+  try {
+    const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/pages.yml'), 'utf8');
+    const block = wf.match(/PUBLISH=\(([\s\S]*?)\)/);
+    if (!block) return null;
+    return new Set(block[1].split('\n').map(s => s.trim()).filter(Boolean));
+  } catch (_) { return null; }
+}
+
+/* Which pages are reachable from the site's own navigation. */
+function menuSet() {
+  try {
+    const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+    const nav = html.slice(html.indexOf('<nav class="header-nav"'), html.indexOf('</nav>'));
+    const hrefs = [...nav.matchAll(/href="([^"]*)"/g)].map(m => m[1]);
+    const out = new Set();
+    hrefs.forEach(h => {
+      if (h === './' || h === '' || h === '/') out.add('index.html');
+      else out.add(h.replace(/^\.\//, '').replace(/\/$/, '') + '/index.html');
+    });
+    return out;
+  } catch (_) { return new Set(); }
+}
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
@@ -141,6 +192,7 @@ const escapeHtml = s =>
 
 function gridMarkup(files) {
   const total = files.length;
+  const cols = gallerySettings('headshots').columns;
   const rows = files.map((f, i) => {
     const buf = fs.readFileSync(path.join(ROOT, GALLERIES.headshots.dir, f));
     const d = jpegSize(buf) || { width: 1600, height: 1600 };
@@ -150,13 +202,15 @@ function gridMarkup(files) {
       `      </button>`,
     ].join('\n');
   });
-  return '    <section class="headshot-grid">\n' + rows.join('\n') + '\n    </section>';
+  return `    <section class="headshot-grid" data-cols="${cols}">\n` + rows.join('\n') + '\n    </section>';
 }
 
 function regenerateGrid() {
   const file = path.join(ROOT, GALLERIES.headshots.page);
   const html = fs.readFileSync(file, 'utf8');
-  const re = /[ \t]*<section class="headshot-grid">[\s\S]*?<\/section>/;
+  /* Attributes must be allowed here: once data-cols is written the tag is no
+     longer the bare <section class="headshot-grid">. */
+  const re = /[ \t]*<section class="headshot-grid"[^>]*>[\s\S]*?<\/section>/;
   if (!re.test(html)) throw new Error('headshot-grid section not found in headshots/index.html');
   fs.writeFileSync(file, html.replace(re, gridMarkup(listGallery('headshots'))), 'utf8');
 }
@@ -253,6 +307,37 @@ async function handleApi(req, res, url) {
     });
   }
 
+  /* ---- the page list, grouped the way the sidebar shows it ---- */
+  if (route === 'pages') {
+    const published = publishedSet();
+    const inMenu = menuSet();
+    const pages = PAGES.filter(p => fs.existsSync(path.join(ROOT, p.path))).map(p => {
+      const folder = p.path === 'index.html' ? 'index.html' : p.path.split('/')[0];
+      return {
+        path: p.path,
+        url: p.url,
+        label: p.label,
+        gallery: p.gallery,
+        photos: p.gallery ? listGallery(p.gallery).length : 0,
+        inMenu: inMenu.has(p.path),
+        published: published ? published.has(folder) : true,
+      };
+    });
+    return sendJson(res, 200, { pages });
+  }
+
+  /* ---- per-gallery block settings ---- */
+  if (route === 'settings' && req.method === 'GET') {
+    const gallery = new URLSearchParams(req.url.split('?')[1] || '').get('gallery');
+    if (!GALLERIES[gallery]) return sendJson(res, 400, { error: 'unknown gallery' });
+    return sendJson(res, 200, {
+      gallery,
+      type: GALLERIES[gallery].type,
+      settings: gallerySettings(gallery),
+      photos: listGallery(gallery),
+    });
+  }
+
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST required' });
 
   /* ---- image upload: raw bytes, filename in a header ---- */
@@ -313,6 +398,20 @@ async function handleApi(req, res, url) {
     applyOrder(gallery, remaining);               // close the numbering gap
     const result = await regenerate(gallery);
     return sendJson(res, 200, { ok: true, remaining: remaining.length, rebuild: result.ok });
+  }
+
+  /* ---- save block settings, then rebuild so they take effect ---- */
+  if (route === 'settings') {
+    const { gallery, settings } = body;
+    if (!GALLERIES[gallery]) return sendJson(res, 400, { error: 'unknown gallery' });
+
+    const cfg = readConfig();
+    cfg.galleries = cfg.galleries || {};
+    cfg.galleries[gallery] = Object.assign(gallerySettings(gallery), settings || {});
+    writeConfig(cfg);
+
+    const result = await regenerate(gallery);
+    return sendJson(res, 200, { ok: true, settings: cfg.galleries[gallery], rebuild: result.ok });
   }
 
   /* ---- text ---- */

@@ -1,6 +1,5 @@
-/* DCP New York — local editor overlay.
-   Injected at serve time by tools/editor/server.js. Never shipped to the
-   published site. */
+/* DCP New York — local editor.
+   Injected at serve time by tools/editor/server.js; never shipped. */
 
 (function () {
   'use strict';
@@ -8,6 +7,7 @@
   var CFG = window.__EDITOR__ || {};
   var API = '/__editor/api/';
   var editing = false;
+  var state = { pages: [], status: null };
 
   /* ------------------------------------------------------------ utilities */
 
@@ -19,14 +19,12 @@
   }
 
   var toasts = el('div', 'ed-toasts');
-  document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(toasts); });
 
   function toast(msg, kind) {
     var t = el('div', 'ed-toast' + (kind ? ' ed-toast--' + kind : ''), msg);
     toasts.appendChild(t);
     setTimeout(function () {
-      t.style.transition = 'opacity .3s';
-      t.style.opacity = '0';
+      t.style.transition = 'opacity .3s'; t.style.opacity = '0';
       setTimeout(function () { t.remove(); }, 300);
     }, kind === 'err' ? 6000 : 2600);
   }
@@ -40,72 +38,257 @@
     });
   }
 
-  /* -------------------------------------------------------------- toolbar */
+  var ICON_PAGE = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 1.5h5L12.5 5v9.5h-9z"/><path d="M9 1.5V5h3.5"/></svg>';
+  var ICON_HOME = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2.5 7L8 2.5 13.5 7v6.5h-11z"/></svg>';
+  var ICON_BACK = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9.5 3L5 8l4.5 5"/></svg>';
 
-  var bar, statusEl, editBtn;
+  /* ---------------------------------------------------------------- panel */
 
-  function buildBar() {
-    bar = el('div', 'ed-bar');
+  var panel, body, footStatus;
 
-    bar.appendChild(el('span', 'ed-bar__brand', 'DCP Editor'));
-    bar.appendChild(el('span', 'ed-bar__sep'));
+  function buildPanel() {
+    panel = el('div', 'ed-panel');
 
-    editBtn = el('button', 'ed-btn', 'Edit page');
-    editBtn.type = 'button';
-    editBtn.addEventListener('click', toggleEditing);
-    bar.appendChild(editBtn);
+    var head = el('div', 'ed-head');
+    head.appendChild(el('div', 'ed-head__dot'));
+    var names = el('div');
+    names.appendChild(el('div', 'ed-head__name', 'DCP New York'));
+    names.appendChild(el('div', 'ed-head__sub', 'Local editor'));
+    head.appendChild(names);
+    panel.appendChild(head);
 
-    statusEl = el('span', 'ed-bar__status', 'Loading…');
-    bar.appendChild(statusEl);
+    body = el('div', 'ed-body');
+    panel.appendChild(body);
 
-    bar.appendChild(el('span', 'ed-bar__spacer'));
-
-    var view = el('button', 'ed-btn', 'Open live site');
-    view.type = 'button';
-    view.addEventListener('click', function () {
-      window.open('https://www.dcpnewyork.com/', '_blank', 'noopener');
-    });
-    bar.appendChild(view);
-
-    var pub = el('button', 'ed-btn ed-btn--publish', 'Publish…');
+    var foot = el('div', 'ed-foot');
+    footStatus = el('div', 'ed-row__meta');
+    foot.appendChild(footStatus);
+    var pub = el('button', 'ed-btn ed-btn--primary', 'Publish');
     pub.type = 'button';
     pub.addEventListener('click', openPublish);
-    bar.appendChild(pub);
+    foot.appendChild(pub);
+    panel.appendChild(foot);
 
-    document.body.appendChild(bar);
+    document.body.appendChild(panel);
+    document.body.appendChild(toasts);
     document.body.classList.add('ed-active');
   }
 
   function refreshStatus() {
-    api('status').then(function (s) {
+    return api('status').then(function (s) {
+      state.status = s;
       var bits = [];
-      bits.push('<b>' + s.changedCount + '</b> unsaved change' + (s.changedCount === 1 ? '' : 's'));
-      if (s.unpushed) bits.push('<b>' + s.unpushed + '</b> unpublished commit' + (s.unpushed === 1 ? '' : 's'));
-      statusEl.innerHTML = bits.join(' &middot; ');
-    }).catch(function (e) { statusEl.textContent = 'status unavailable: ' + e.message; });
+      if (s.changedCount) bits.push(s.changedCount + ' unsaved');
+      if (s.unpushed) bits.push(s.unpushed + ' to push');
+      footStatus.textContent = bits.length ? bits.join(' · ') : 'Up to date';
+    }).catch(function () { footStatus.textContent = ''; });
+  }
+
+  /* ------------------------------------------------------------ view: pages */
+
+  function showPages() {
+    body.innerHTML = '';
+
+    var head = el('div', 'ed-sec');
+    head.style.display = 'flex';
+    head.style.justifyContent = 'space-between';
+    head.style.alignItems = 'center';
+    head.innerHTML = '<span>Pages</span>';
+    body.appendChild(head);
+
+    api('pages').then(function (r) {
+      state.pages = r.pages;
+
+      var inMenu = r.pages.filter(function (p) { return p.inMenu; });
+      var hidden = r.pages.filter(function (p) { return !p.inMenu; });
+
+      if (inMenu.length) {
+        body.appendChild(el('div', 'ed-sec', 'Site menu'));
+        inMenu.forEach(function (p) { body.appendChild(pageRow(p)); });
+      }
+      if (hidden.length) {
+        body.appendChild(el('div', 'ed-sec', 'Not in menu'));
+        hidden.forEach(function (p) { body.appendChild(pageRow(p)); });
+      }
+
+      body.appendChild(el('div', 'ed-note',
+        '<b>Draft pages</b>These exist in the repository but are left out of the ' +
+        'deploy allowlist, so they are not on the live site. Publishing will not ' +
+        'expose them.'));
+    }).catch(function (e) {
+      body.appendChild(el('div', 'ed-note', e.message));
+    });
+  }
+
+  function pageRow(p) {
+    var row = el('button', 'ed-row');
+    row.type = 'button';
+    if (p.url === location.pathname || (p.url === '/' && location.pathname === '/index.html')) {
+      row.classList.add('is-current');
+    }
+
+    row.appendChild(el('span', 'ed-row__ico', p.url === '/' ? ICON_HOME : ICON_PAGE));
+    row.appendChild(el('span', 'ed-row__label', p.label));
+
+    if (!p.published) row.appendChild(el('span', 'ed-tag ed-tag--draft', 'Draft'));
+    else if (!p.inMenu) row.appendChild(el('span', 'ed-tag ed-tag--hidden', 'Unlinked'));
+    else if (p.gallery) row.appendChild(el('span', 'ed-row__meta', p.photos));
+
+    row.addEventListener('click', function () {
+      if (p.url === location.pathname) { showPage(p); return; }
+      sessionStorage.setItem('ed-open', p.path);
+      location.href = p.url;
+    });
+    return row;
+  }
+
+  /* ------------------------------------------------------- view: one page */
+
+  function showPage(p) {
+    body.innerHTML = '';
+
+    var back = el('button', 'ed-back', ICON_BACK + '<span>Pages</span>');
+    back.type = 'button';
+    back.addEventListener('click', function () { if (editing) stopEditing(); showPages(); });
+    body.appendChild(back);
+
+    body.appendChild(el('div', 'ed-title', p.label));
+
+    if (!p.gallery) {
+      body.appendChild(el('div', 'ed-opts',
+        '<div class="ed-opts__h">Text</div>' +
+        '<p class="ed-opt__hint">This page has no photo gallery. Use ' +
+        '<b>Edit text</b> below, then click any heading or paragraph to rewrite it.</p>'));
+      body.appendChild(editToggleButton('Edit text'));
+      return;
+    }
+
+    api('settings?gallery=' + encodeURIComponent(p.gallery)).then(function (s) {
+      renderBlock(p, s);
+    }).catch(function (e) { body.appendChild(el('div', 'ed-note', e.message)); });
+  }
+
+  function thumbPath(p, file) {
+    return '/assets/img/' + p.gallery + '/' + file;
+  }
+
+  function renderBlock(p, s) {
+    var isGrid = s.type === 'grid';
+
+    body.appendChild(el('div', 'ed-sec', isGrid ? 'Photo grid' : 'Photo slider'));
+
+    /* big preview + "Manage Photos" */
+    var hero = el('button', 'ed-hero');
+    hero.type = 'button';
+    if (s.photos[0]) {
+      var img = el('img');
+      img.src = thumbPath(p, s.photos[0]);
+      hero.appendChild(img);
+    }
+    hero.appendChild(el('div', 'ed-hero__veil',
+      '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4">' +
+      '<rect x="2" y="4" width="9" height="8"/><path d="M5 4V2.5h9V10h-1.5"/></svg><span>Manage photos</span>'));
+    hero.addEventListener('click', function () { startEditing(); });
+    body.appendChild(hero);
+
+    /* thumbnail strip */
+    var strip = el('div', 'ed-thumbs');
+    s.photos.slice(1, 6).forEach(function (f) {
+      var d = el('div');
+      var i = el('img'); i.src = thumbPath(p, f); d.appendChild(i);
+      strip.appendChild(d);
+    });
+    if (s.photos.length > 6) {
+      strip.appendChild(el('div', 'ed-thumbs__more', '+' + (s.photos.length - 6)));
+    }
+    body.appendChild(strip);
+
+    var opts = el('div', 'ed-opts');
+    opts.appendChild(el('div', 'ed-opts__h', 'Options'));
+
+    if (isGrid) {
+      /* columns */
+      var o = el('div', 'ed-opt');
+      o.appendChild(el('span', 'ed-opt__label', 'Columns'));
+      var seg = el('div', 'ed-seg');
+      [2, 3, 4].forEach(function (n) {
+        var b = el('button', s.settings.columns === n ? 'is-on' : '', String(n));
+        b.type = 'button';
+        b.addEventListener('click', function () { saveSettings(p, { columns: n }); });
+        seg.appendChild(b);
+      });
+      o.appendChild(seg);
+      o.appendChild(el('div', 'ed-opt__hint', 'Desktop only. Phones always show two columns.'));
+      opts.appendChild(o);
+    } else {
+      /* arrow controls */
+      opts.appendChild(toggleOption(
+        'Show slider controls', s.settings.showControls,
+        'The arrows under the strip. Dragging and the keyboard still work either way.',
+        function (on) { saveSettings(p, { showControls: on }); }
+      ));
+    }
+
+    opts.appendChild(el('div', 'ed-opt',
+      '<span class="ed-opt__label">Photos</span>' +
+      '<div class="ed-opt__hint">' + s.photos.length + ' in this gallery. ' +
+      'Open <b>Manage photos</b> to drag them into a new order, add more, or remove one.</div>'));
+
+    body.appendChild(opts);
+    body.appendChild(editToggleButton('Manage photos'));
+  }
+
+  function toggleOption(label, value, hint, onChange) {
+    var o = el('div', 'ed-opt');
+    o.appendChild(el('span', 'ed-opt__label', label));
+
+    var wrap = el('label', 'ed-toggle');
+    var input = el('input'); input.type = 'checkbox'; input.checked = !!value;
+    var track = el('span', 'ed-toggle__track');
+    var stateTxt = el('span', 'ed-toggle__state', value ? 'On' : 'Off');
+    input.addEventListener('change', function () {
+      stateTxt.textContent = input.checked ? 'On' : 'Off';
+      onChange(input.checked);
+    });
+    wrap.appendChild(input); wrap.appendChild(track); wrap.appendChild(stateTxt);
+    o.appendChild(wrap);
+    if (hint) o.appendChild(el('div', 'ed-opt__hint', hint));
+    return o;
+  }
+
+  function saveSettings(p, patch) {
+    api('settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gallery: p.gallery, settings: patch }),
+    }).then(function () {
+      toast('Setting saved', 'ok');
+      sessionStorage.setItem('ed-open', p.path);
+      setTimeout(function () { location.reload(); }, 500);
+    }).catch(function (e) { toast(e.message, 'err'); });
+  }
+
+  function editToggleButton(labelOn) {
+    var wrap = el('div');
+    wrap.style.padding = '18px 16px 0';
+    var b = el('button', 'ed-btn ed-btn--wide ed-btn--ghost', editing ? 'Done editing' : labelOn);
+    b.type = 'button';
+    b.addEventListener('click', function () {
+      if (editing) { stopEditing(); } else { startEditing(); b.textContent = 'Done editing'; }
+    });
+    wrap.appendChild(b);
+    return wrap;
   }
 
   /* ------------------------------------------------------------ edit mode */
 
-  function toggleEditing() {
-    editing = !editing;
-    document.body.classList.toggle('ed-editing', editing);
-    editBtn.textContent = editing ? 'Done editing' : 'Edit page';
-    editBtn.classList.toggle('ed-btn--on', editing);
+  function startEditing() {
+    if (editing) return;
+    editing = true;
+    document.body.classList.add('ed-editing');
 
-    if (editing) { enterEditing(); }
-    else { exitEditing(); }
-  }
-
-  function galleryContainer() {
-    return document.querySelector('.headshot-grid') || document.querySelector('.carousel__track');
-  }
-
-  function enterEditing() {
     var box = galleryContainer();
     if (box && CFG.gallery) {
-      /* The carousel clones its slides three times at runtime; drop the copies
-         so we are reordering the real set. */
       Array.prototype.slice.call(box.children).forEach(function (c) {
         if (c.getAttribute('aria-hidden') === 'true') c.remove();
       });
@@ -113,28 +296,21 @@
       addDropZone(box);
     }
     enableText();
-    toast('Editing on. Drag photos to reorder, click text to rewrite.');
+    toast('Drag photos to reorder. Click text to rewrite it.');
   }
 
-  function exitEditing() {
-    document.querySelectorAll('.ed-item__n,.ed-item__del').forEach(function (n) { n.remove(); });
-    document.querySelectorAll('.ed-item').forEach(function (n) {
-      n.classList.remove('ed-item');
-      n.draggable = false;
-    });
-    var dz = document.querySelector('.ed-drop');
-    if (dz) dz.remove();
-    disableText();
-    /* Reload so the carousel rebuilds its clones and the page is true to disk. */
+  function stopEditing() {
+    editing = false;
     location.reload();
   }
 
-  /* ------------------------------------------------------- drag to reorder */
+  function galleryContainer() {
+    return document.querySelector('.headshot-grid') || document.querySelector('.carousel__track');
+  }
 
   function fileOf(item) {
     var img = item.querySelector('img');
-    if (!img) return null;
-    return img.getAttribute('src').split('/').pop().split('?')[0];
+    return img ? img.getAttribute('src').split('/').pop().split('?')[0] : null;
   }
 
   function renumber(box) {
@@ -147,46 +323,43 @@
   }
 
   function decorateItems(box) {
-    var items = Array.prototype.slice.call(box.children).filter(function (c) { return c.querySelector('img'); });
+    Array.prototype.slice.call(box.children)
+      .filter(function (c) { return c.querySelector('img'); })
+      .forEach(function (item, i) {
+        item.classList.add('ed-item');
+        item.draggable = true;
+        item.appendChild(el('span', 'ed-item__n', String(i + 1)));
 
-    items.forEach(function (item, i) {
-      item.classList.add('ed-item');
-      item.draggable = true;
+        var del = el('button', 'ed-item__del', '×');
+        del.type = 'button';
+        del.title = 'Remove this photo';
+        del.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation(); removePhoto(fileOf(item));
+        });
+        item.appendChild(del);
 
-      item.appendChild(el('span', 'ed-item__n', String(i + 1)));
-
-      var del = el('button', 'ed-item__del', '×');
-      del.type = 'button';
-      del.title = 'Remove this photo';
-      del.addEventListener('click', function (e) {
-        e.preventDefault(); e.stopPropagation();
-        removePhoto(fileOf(item));
+        item.addEventListener('dragstart', function (e) {
+          item.classList.add('ed-dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          try { e.dataTransfer.setData('text/plain', fileOf(item)); } catch (_) {}
+        });
+        item.addEventListener('dragend', function () {
+          item.classList.remove('ed-dragging');
+          document.querySelectorAll('.ed-over').forEach(function (n) { n.classList.remove('ed-over'); });
+          commitOrder(box);
+        });
+        item.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          var dragging = box.querySelector('.ed-dragging');
+          if (!dragging || dragging === item) return;
+          item.classList.add('ed-over');
+          var r = item.getBoundingClientRect();
+          box.insertBefore(dragging, (e.clientX - r.left) > r.width / 2 ? item.nextSibling : item);
+          renumber(box);
+        });
+        item.addEventListener('dragleave', function () { item.classList.remove('ed-over'); });
+        item.addEventListener('drop', function (e) { e.preventDefault(); item.classList.remove('ed-over'); });
       });
-      item.appendChild(del);
-
-      item.addEventListener('dragstart', function (e) {
-        item.classList.add('ed-dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', fileOf(item)); } catch (_) {}
-      });
-      item.addEventListener('dragend', function () {
-        item.classList.remove('ed-dragging');
-        document.querySelectorAll('.ed-over').forEach(function (n) { n.classList.remove('ed-over'); });
-        commitOrder(box);
-      });
-      item.addEventListener('dragover', function (e) {
-        e.preventDefault();
-        var dragging = box.querySelector('.ed-dragging');
-        if (!dragging || dragging === item) return;
-        item.classList.add('ed-over');
-        var r = item.getBoundingClientRect();
-        var after = (e.clientX - r.left) > r.width / 2;
-        box.insertBefore(dragging, after ? item.nextSibling : item);
-        renumber(box);
-      });
-      item.addEventListener('dragleave', function () { item.classList.remove('ed-over'); });
-      item.addEventListener('drop', function (e) { e.preventDefault(); item.classList.remove('ed-over'); });
-    });
   }
 
   var orderTimer;
@@ -195,18 +368,15 @@
     orderTimer = setTimeout(function () {
       var order = Array.prototype.slice.call(box.children)
         .filter(function (c) { return c.classList.contains('ed-item'); })
-        .map(fileOf)
-        .filter(Boolean);
+        .map(fileOf).filter(Boolean);
       if (!order.length) return;
 
       api('gallery/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gallery: CFG.gallery, order: order }),
-      }).then(function () {
-        toast('Order saved', 'ok');
-        refreshStatus();
-      }).catch(function (e) { toast(e.message, 'err'); });
+      }).then(function () { toast('Order saved', 'ok'); refreshStatus(); })
+        .catch(function (e) { toast(e.message, 'err'); });
     }, 250);
   }
 
@@ -219,15 +389,14 @@
       body: JSON.stringify({ gallery: CFG.gallery, file: file }),
     }).then(function (r) {
       toast('Removed. ' + r.remaining + ' photos left.', 'ok');
+      sessionStorage.setItem('ed-open', CFG.page);
       setTimeout(function () { location.reload(); }, 600);
     }).catch(function (e) { toast(e.message, 'err'); });
   }
 
-  /* -------------------------------------------------------- add new photos */
-
   function addDropZone(box) {
     var dz = el('div', 'ed-drop',
-      '<b>Drop photos here to add them</b>JPEGs only. They are resized for the web automatically.');
+      '<b>Drop photos here to add them</b>JPEGs only, resized for the web automatically.');
     box.parentNode.insertBefore(dz, box.nextSibling);
 
     ['dragenter', 'dragover'].forEach(function (ev) {
@@ -236,7 +405,6 @@
     ['dragleave', 'drop'].forEach(function (ev) {
       dz.addEventListener(ev, function () { dz.classList.remove('ed-drop--hot'); });
     });
-
     dz.addEventListener('drop', function (e) {
       e.preventDefault();
       var files = Array.prototype.slice.call(e.dataTransfer.files || [])
@@ -244,15 +412,10 @@
       if (!files.length) { toast('Only .jpg files can be added', 'err'); return; }
       uploadQueue(files);
     });
-
     dz.addEventListener('click', function () {
       var input = el('input');
-      input.type = 'file';
-      input.accept = 'image/jpeg';
-      input.multiple = true;
-      input.addEventListener('change', function () {
-        uploadQueue(Array.prototype.slice.call(input.files));
-      });
+      input.type = 'file'; input.accept = 'image/jpeg'; input.multiple = true;
+      input.addEventListener('change', function () { uploadQueue(Array.prototype.slice.call(input.files)); });
       input.click();
     });
   }
@@ -260,21 +423,20 @@
   function uploadQueue(files) {
     toast('Adding ' + files.length + ' photo' + (files.length === 1 ? '' : 's') + '…');
     var done = 0;
-
     (function next(i) {
       if (i >= files.length) {
         toast('Added ' + done + ' photo' + (done === 1 ? '' : 's'), 'ok');
+        sessionStorage.setItem('ed-open', CFG.page);
         setTimeout(function () { location.reload(); }, 700);
         return;
       }
-      var f = files[i];
-      f.arrayBuffer().then(function (buf) {
+      files[i].arrayBuffer().then(function (buf) {
         return fetch(API + 'gallery/upload', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/octet-stream',
             'X-Gallery': CFG.gallery,
-            'X-Filename': f.name,
+            'X-Filename': files[i].name,
           },
           body: buf,
         }).then(function (r) { return r.json(); });
@@ -296,7 +458,6 @@
       node.addEventListener('blur', function () {
         var text = node.textContent.replace(/\s+/g, ' ').trim();
         if (text === (node.dataset.edOriginal || '').replace(/\s+/g, ' ').trim()) return;
-
         api('text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -311,7 +472,6 @@
         });
       });
 
-      /* Enter commits rather than inserting a newline. */
       node.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); node.blur(); }
         if (e.key === 'Escape') { node.textContent = node.dataset.edOriginal; node.blur(); }
@@ -319,11 +479,7 @@
     });
   }
 
-  function disableText() {
-    document.querySelectorAll('[data-ed]').forEach(function (n) { n.contentEditable = 'false'; });
-  }
-
-  /* -------------------------------------------------------------- publish */
+  /* ---------------------------------------------------------------- publish */
 
   function openPublish() {
     var modal = el('div', 'ed-modal');
@@ -331,13 +487,13 @@
       '<div class="ed-modal__box">' +
       '  <div class="ed-modal__head">Publish changes</div>' +
       '  <div class="ed-modal__body">' +
-      '    <p>This commits everything currently changed and pushes it to GitHub. The live site updates within a minute.</p>' +
+      '    <p>Commits everything currently changed and pushes it to GitHub. The live site updates within a minute. Draft pages stay off the site.</p>' +
       '    <input type="text" class="ed-msg" placeholder="Describe the change" value="Update site content">' +
       '    <div class="ed-log" hidden></div>' +
       '  </div>' +
       '  <div class="ed-modal__foot">' +
       '    <button class="ed-btn ed-cancel" type="button">Cancel</button>' +
-      '    <button class="ed-btn ed-btn--publish ed-go" type="button">Publish</button>' +
+      '    <button class="ed-btn ed-btn--primary ed-go" type="button" style="flex:0 0 auto">Publish</button>' +
       '  </div>' +
       '</div>';
     document.body.appendChild(modal);
@@ -345,18 +501,14 @@
     var input = modal.querySelector('.ed-msg');
     var log = modal.querySelector('.ed-log');
     var go = modal.querySelector('.ed-go');
-    input.focus();
-    input.select();
+    input.focus(); input.select();
 
     modal.querySelector('.ed-cancel').addEventListener('click', function () { modal.remove(); });
     modal.addEventListener('click', function (e) { if (e.target === modal) modal.remove(); });
 
     go.addEventListener('click', function () {
-      go.disabled = true;
-      go.textContent = 'Publishing…';
-      log.hidden = false;
-      log.textContent = 'Working…';
-
+      go.disabled = true; go.textContent = 'Publishing…';
+      log.hidden = false; log.textContent = 'Working…';
       api('publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -364,23 +516,34 @@
       }).then(function (r) {
         log.textContent = r.log || '(no output)';
         go.textContent = 'Published';
-        toast(r.nothingToCommit ? 'Nothing new to commit; pushed any pending commits.' : 'Published to GitHub', 'ok');
+        toast(r.nothingToCommit ? 'Nothing new to commit; pushed pending commits.' : 'Published to GitHub', 'ok');
         refreshStatus();
         setTimeout(function () { modal.remove(); }, 2200);
       }).catch(function (e) {
         log.textContent = e.message;
-        go.disabled = false;
-        go.textContent = 'Retry';
+        go.disabled = false; go.textContent = 'Retry';
         toast('Publish failed: ' + e.message, 'err');
       });
     });
   }
 
-  /* ----------------------------------------------------------------- boot */
+  /* ------------------------------------------------------------------ boot */
 
   document.addEventListener('DOMContentLoaded', function () {
-    buildBar();
+    buildPanel();
     refreshStatus();
     setInterval(refreshStatus, 15000);
+
+    /* If we arrived by clicking a page in the list, open that page's panel. */
+    var wanted = sessionStorage.getItem('ed-open');
+    sessionStorage.removeItem('ed-open');
+
+    api('pages').then(function (r) {
+      state.pages = r.pages;
+      var here = r.pages.filter(function (p) { return p.path === CFG.page; })[0];
+      if (wanted && here && wanted === CFG.page) showPage(here);
+      else if (here) showPage(here);
+      else showPages();
+    }).catch(showPages);
   });
 })();

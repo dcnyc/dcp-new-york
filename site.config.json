@@ -1,0 +1,10 @@
+{
+  "galleries": {
+    "headshots": {
+      "columns": 3
+    },
+    "portraits": {
+      "showControls": true
+    }
+  }
+}

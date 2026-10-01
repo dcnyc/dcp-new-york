@@ -334,8 +334,14 @@ body.menu-open{overflow:hidden}
   .lightbox__close{top:14px;right:14px}
 }
 
+/* Column count is set per gallery in site.config.json by the local editor. */
+.headshot-grid[data-cols="2"]{grid-template-columns:repeat(2,1fr)}
+.headshot-grid[data-cols="4"]{grid-template-columns:repeat(4,1fr)}
+.headshot-grid[data-cols="5"]{grid-template-columns:repeat(5,1fr)}
+
 @media screen and (max-width:991px){
-  .headshot-grid{grid-template-columns:repeat(2,1fr)}
+  .headshot-grid,
+  .headshot-grid[data-cols]{grid-template-columns:repeat(2,1fr)}
 }
 @media screen and (max-width:767px){
   .page-head{padding:4px var(--block-edge-space-x) 22px}

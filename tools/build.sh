@@ -10,6 +10,24 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Reads a per-gallery option out of site.config.json, which the local editor
+# writes. Falls back to the given default when the file or key is absent, so
+# the build works with no config present at all.
+#   setting <gallery> <key> <default>
+setting() {
+  local gallery="$1" key="$2" fallback="$3"
+  if [ ! -f site.config.json ] || ! command -v node >/dev/null 2>&1; then
+    printf '%s' "$fallback"; return
+  fi
+  node -e '
+    const fs=require("fs");
+    let cfg={};
+    try{cfg=JSON.parse(fs.readFileSync("site.config.json","utf8"));}catch(e){}
+    const v=((cfg.galleries||{})[process.argv[1]]||{})[process.argv[2]];
+    process.stdout.write(v===undefined?process.argv[3]:String(v));
+  ' "$gallery" "$key" "$fallback"
+}
+
 # ---- header -------------------------------------------------------------
 # $1 = prefix to site root ("" or "../"), $2 = active page key
 emit_header() {
@@ -128,6 +146,12 @@ CAR_OPEN
 
         <button class="carousel__zone carousel__zone--prev js-prev" type="button" aria-label="Previous photo"></button>
         <button class="carousel__zone carousel__zone--next js-next" type="button" aria-label="Next photo"></button>
+CAR_CLOSE
+
+  # The arrow nav under the strip is optional, toggled per gallery in
+  # site.config.json by the local editor.
+  if [ "$(setting "$DIR" showControls true)" = "true" ]; then
+    cat <<'CAR_NAV'
 
         <div class="carousel__nav">
           <button class="js-prev" type="button" aria-label="Previous photo">
@@ -137,9 +161,13 @@ CAR_OPEN
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
+CAR_NAV
+  fi
+
+  cat <<'CAR_END'
       </div>
     </section>
-CAR_CLOSE
+CAR_END
 }
 
 # ---- page shell ---------------------------------------------------------
