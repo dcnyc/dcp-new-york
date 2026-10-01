@@ -30,3 +30,4 @@ Desktop.ini
 # DELETE THESE TWO LINES when you are ready to publish the Headshots page.
 # ---------------------------------------------------------------------------
 /assets/img/headshots/headshot-*.jpg
+/assets/img/real-estate/*.jpg
