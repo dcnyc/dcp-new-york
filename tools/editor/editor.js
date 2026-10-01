@@ -318,13 +318,13 @@
   }
 
   function saveSettings(p, patch) {
-    busy('Applying setting2026');
+    busy('Applying setting…');
     api('settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gallery: p.gallery, settings: patch }),
     }).then(function () {
-      busyUpdate('Rebuilding2026');
+      busyUpdate('Rebuilding…');
       toast('Setting saved', 'ok');
       sessionStorage.setItem('ed-open', p.path);
       setTimeout(function () { location.reload(); }, 500);
@@ -434,26 +434,53 @@
         .map(fileOf).filter(Boolean);
       if (!order.length) return;
 
-      busy('Saving order2026');
+      busy('Saving order…');
       api('gallery/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gallery: CFG.gallery, order: order }),
-      }).then(function () { toast('Order saved', 'ok'); refreshStatus(); })
-        .catch(function (e) { toast(e.message, 'err'); });
+      }).then(function (r) {
+        /* Reordering renames every file on disk, so adopt the new names now.
+           Without this the page keeps the old ones and the next drag is
+           rejected as out of step. */
+        if (r.files) adoptNames(box, r.files);
+        busyDone();
+        toast('Order saved', 'ok');
+        refreshStatus();
+      }).catch(function (e) {
+        busyDone();
+        toast(e.message, 'err');
+        /* Genuinely out of step: reload so the page picks up the real names. */
+        if (/out of step/i.test(e.message)) {
+          sessionStorage.setItem('ed-open', CFG.page);
+          setTimeout(function () { location.reload(); }, 2000);
+        }
+      });
     }, 250);
+  }
+
+  /* Point each item at the filename the server gave it after a rename. */
+  function adoptNames(box, files) {
+    Array.prototype.slice.call(box.children)
+      .filter(function (c) { return c.classList.contains('ed-item'); })
+      .forEach(function (item, i) {
+        var img = item.querySelector('img');
+        if (!img || !files[i]) return;
+        var src = img.getAttribute('src').split('?')[0];
+        img.setAttribute('src', src.replace(/[^/]+$/, files[i]) + '?t=' + Date.now());
+      });
   }
 
   function removePhoto(file) {
     if (!file) return;
     if (!confirm('Remove ' + file + ' from this gallery?\n\nA copy is kept in .originals/removed/.')) return;
-    busy('Removing photo2026');
+    busy('Removing photo…');
     api('gallery/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ gallery: CFG.gallery, file: file }),
     }).then(function (r) {
-      busyUpdate('Rebuilding2026');
+      busyUpdate('Rebuilding…');
       toast('Removed. ' + r.remaining + ' photos left.', 'ok');
       sessionStorage.setItem('ed-open', CFG.page);
       setTimeout(function () { location.reload(); }, 600);
@@ -611,7 +638,7 @@
       node.addEventListener('blur', function () {
         var text = node.textContent.replace(/\s+/g, ' ').trim();
         if (text === (node.dataset.edOriginal || '').replace(/\s+/g, ' ').trim()) return;
-        busy('Saving text2026');
+        busy('Saving text…');
         api('text', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

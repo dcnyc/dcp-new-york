@@ -4,16 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>Headshot Photographer | Bergen County NJ &amp; New York City</title>
-  <meta name="description" content="Corporate, actor and personal branding headshots in Wyckoff, Ridgewood, Glen Rock, Paramus and across Bergen County, NJ, and New York City. Relaxed sessions, natural expression.">
-  <link rel="canonical" href="https://www.dcpnewyork.com/headshots/">
+  <title>Real Estate | DCP New York</title>
+  <meta name="description" content="Real Estate photography by DCP New York.">
+  <link rel="canonical" href="https://www.dcpnewyork.com/real-estate/">
 
   <meta property="og:site_name" content="DCP New York">
-  <meta property="og:title" content="Headshot Photographer | Bergen County NJ &amp; New York City">
+  <meta property="og:title" content="Real Estate | DCP New York">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://www.dcpnewyork.com/headshots/">
-  <meta property="og:description" content="Corporate, actor and personal branding headshots in Bergen County, NJ and New York City.">
-  <meta property="og:image" content="https://www.dcpnewyork.com/assets/img/about/dennis-2.jpg">
+  <meta property="og:url" content="https://www.dcpnewyork.com/real-estate/">
+  <meta property="og:description" content="Real Estate photography by DCP New York.">
   <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" href="../assets/img/logo.png">
@@ -69,29 +68,20 @@
     ]
   }
   </script>
-
 </head>
 <body>
   <!--
     ============================================================
     NOT PUBLISHED YET.
 
-    This page is deliberately absent from the PUBLISH list in
-    .github/workflows/pages.yml, so it stays in the repository and is
-    never uploaded to the live site. It is also not linked from any
-    navigation menu.
+    "real-estate" is absent from the PUBLISH list in
+    .github/workflows/pages.yml, so this page stays in the repository and
+    is never uploaded. It is also not linked from any navigation menu.
 
-    To go live, three things:
-      1. add "headshots" to PUBLISH in .github/workflows/pages.yml
-         (must be edited via GitHub's web editor - the saved credential
-         lacks the `workflow` scope)
-      2. add the nav links: emit_header and emit_footer in tools/build.sh,
-         plus contact/index.html and client/index.html, then rebuild
-      3. commit the photos in assets/img/headshots/ - note that anything
-         under assets/ is published, so those files become reachable by
-         direct URL as soon as they are committed, page live or not
-
-    Photos are named headshot-NN.jpg; the number sets the grid order.
+    To go live:
+      1. add "real-estate" to PUBLISH in .github/workflows/pages.yml
+      2. add nav links in tools/build.sh, contact/index.html and
+         client/index.html, then rebuild
     ============================================================
   -->
   <header class="site-header">
@@ -110,7 +100,7 @@
 
       <div class="nav-side nav-side--right">
         <a class="nav-link" href="../client/">Client</a>
-        <a class="nav-link" href="../contact/">Contact</a>
+        <a class="nav-link is-active" href="../contact/">Contact</a>
       </div>
     </nav>
   </header>
@@ -120,51 +110,37 @@
     <a class="" href="../">Portraits</a>
     <a class="" href="../events/">Event</a>
     <a class="" href="../client/">Client</a>
-    <a class="" href="../contact/">Contact</a>
+    <a class="is-active" href="../contact/">Contact</a>
   </div>
 
   <main role="main">
-    <section class="page-head">
-      <h1 class="page-head__title">Headshots</h1>
-    </section>
+    <section class="photo-slider">
+      <div class="carousel js-carousel">
+        <div class="carousel__track">
+          <div class="carousel__slide"><img src="../assets/img/real-estate/01-IMG_2564-4116399a.jpg" alt="IMG 2564 4116399a" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/02-IMG_2895-dc44319e.jpg" alt="IMG 2895 dc44319e" width="1066" height="1600" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/03-IMG_2576-5a4ffe65.jpg" alt="IMG 2576 5a4ffe65" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/04-IMG_2867-5610b670.jpg" alt="IMG 2867 5610b670" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/05-IMG_2919-a4a73483.jpg" alt="IMG 2919 a4a73483" width="1066" height="1600" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/06-IMG_2956-95dd670f.jpg" alt="IMG 2956 95dd670f" width="1066" height="1600" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/07-IMG_2627-9d14f7c9.jpg" alt="IMG 2627 9d14f7c9" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/08-IMG_2732-4d51e6bc.jpg" alt="IMG 2732 4d51e6bc" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/09-IMG_2995-149b3b50.jpg" alt="IMG 2995 149b3b50" width="1600" height="1066" loading="lazy" draggable="false"></div>
+          <div class="carousel__slide"><img src="../assets/img/real-estate/10-IMG_3781-bc92a5ca.jpg" alt="IMG 3781 bc92a5ca" width="1066" height="1600" loading="lazy" draggable="false"></div>
+        </div>
 
-    <section class="headshot-grid" data-cols="3">
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 1 of 12 full size">
-        <img src="../assets/img/headshots/headshot-01.jpg" alt="Professional headshot by DCP New York" width="1280" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 2 of 12 full size">
-        <img src="../assets/img/headshots/headshot-02.jpg" alt="Professional headshot by DCP New York" width="1280" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 3 of 12 full size">
-        <img src="../assets/img/headshots/headshot-03.jpg" alt="Professional headshot by DCP New York" width="1280" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 4 of 12 full size">
-        <img src="../assets/img/headshots/headshot-04.jpg" alt="Professional headshot by DCP New York" width="1600" height="1599" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 5 of 12 full size">
-        <img src="../assets/img/headshots/headshot-05.jpg" alt="Professional headshot by DCP New York" width="1599" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 6 of 12 full size">
-        <img src="../assets/img/headshots/headshot-06.jpg" alt="Professional headshot by DCP New York" width="1599" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 7 of 12 full size">
-        <img src="../assets/img/headshots/headshot-07.jpg" alt="Professional headshot by DCP New York" width="1599" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 8 of 12 full size">
-        <img src="../assets/img/headshots/headshot-08.jpg" alt="Professional headshot by DCP New York" width="1600" height="1599" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 9 of 12 full size">
-        <img src="../assets/img/headshots/headshot-09.jpg" alt="Professional headshot by DCP New York" width="1597" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 10 of 12 full size">
-        <img src="../assets/img/headshots/headshot-10.jpg" alt="Professional headshot by DCP New York" width="1599" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 11 of 12 full size">
-        <img src="../assets/img/headshots/headshot-11.jpg" alt="Professional headshot by DCP New York" width="1597" height="1600" loading="lazy">
-      </button>
-      <button class="headshot-cell js-lb-open" type="button" aria-label="View photo 12 of 12 full size">
-        <img src="../assets/img/headshots/headshot-12.jpg" alt="Professional headshot by DCP New York" width="1600" height="1599" loading="lazy">
-      </button>
+        <button class="carousel__zone carousel__zone--prev js-prev" type="button" aria-label="Previous photo"></button>
+        <button class="carousel__zone carousel__zone--next js-next" type="button" aria-label="Next photo"></button>
+
+        <div class="carousel__nav">
+          <button class="js-prev" type="button" aria-label="Previous photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button class="js-next" type="button" aria-label="Next photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -174,7 +150,7 @@
         <a class="" href="../">Portraits</a>
         <a class="" href="../events/">Event</a>
         <a class="" href="../client/">Client</a>
-        <a class="" href="../contact/">Contact</a>
+        <a class="is-active" href="../contact/">Contact</a>
       </nav>
 
       <div class="footer__last">
@@ -200,22 +176,6 @@
       </p>
     </div>
   </footer>
-
-  <!-- Full-size viewer. Hidden until a grid photo is clicked. -->
-  <div class="lightbox js-lb" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
-    <img class="lightbox__img js-lb-img" src="" alt="">
-
-    <button class="lightbox__close js-lb-close" type="button" aria-label="Close viewer"></button>
-
-    <button class="lightbox__arrow lightbox__arrow--prev js-lb-prev" type="button" aria-label="Previous photo">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
-    </button>
-    <button class="lightbox__arrow lightbox__arrow--next js-lb-next" type="button" aria-label="Next photo">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-    </button>
-
-    <p class="lightbox__count js-lb-count" aria-live="polite"></p>
-  </div>
 
   <script src="../assets/js/site.js?v=10"></script>
 </body>

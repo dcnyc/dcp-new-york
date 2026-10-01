@@ -6,5 +6,10 @@
     "portraits": {
       "showControls": true
     }
+  },
+  "pages": {
+    "real-estate/index.html": {
+      "label": "Real Estate"
+    }
   }
 }

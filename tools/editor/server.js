@@ -233,7 +233,10 @@ function applyOrder(galleryName, order) {
   const existing = listGallery(galleryName);
 
   if (order.length !== existing.length || !order.every(f => existing.includes(f))) {
-    throw new Error('the requested order does not match the files on disk');
+    throw new Error(
+      'This page is out of step with the photo folder, so the order was not saved. ' +
+      'Reload the page and try again.'
+    );
   }
 
   const targets = order.map((file, i) => {
@@ -487,7 +490,12 @@ async function handleApi(req, res, url, query) {
     try {
       const moved = applyOrder(gallery, order);
       const rebuild = await regenerate(gallery);
-      return sendJson(res, 200, { ok: true, moved: moved.length, rebuild: rebuild.ok });
+      /* Hand back the new names. Reordering renames every file, so without
+         this the page would keep sending the old ones and the next drag
+         would be rejected. */
+      return sendJson(res, 200, {
+        ok: true, moved: moved.length, rebuild: rebuild.ok, files: listGallery(gallery),
+      });
     } catch (e) { return sendJson(res, 400, { error: e.message }); }
   }
 
