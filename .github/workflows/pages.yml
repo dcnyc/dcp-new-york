@@ -1,8 +1,11 @@
 name: Deploy site to GitHub Pages
 
-# Publishes ONLY the files that make up the website. Everything else in the
-# repository — README.md, DEPLOY.md, tools/, dotfiles — stays in the repo but
-# is never uploaded, so it is not reachable on the live domain.
+# Publishes ONLY the files that make up the live website.
+#
+# Which pages are live is decided by "publish" in site.config.json, not by this
+# file, so the local editor can change it and push. tools/publish-list.js turns
+# that into the exact set of paths, including only the asset folders belonging
+# to published pages — so a draft page's photos are never uploaded.
 
 on:
   push:
@@ -14,7 +17,6 @@ permissions:
   pages: write
   id-token: write
 
-# Never run two deploys at once; let a running one finish.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -31,39 +33,44 @@ jobs:
           set -euo pipefail
           mkdir -p _site
 
-          # Explicit allowlist. Anything not named here is NOT published, so a
-          # new note or script added to the repo stays private by default.
-          # Add a new page folder here when you create one.
-          PUBLISH=(
-            index.html
-            CNAME
-            .nojekyll
-            assets
-            events
-            newyork
-            contact
-            client
-          )
+          node tools/publish-list.js > /tmp/publish.txt
+          echo "--- publishing ---"
+          cat /tmp/publish.txt
 
-          for item in "${PUBLISH[@]}"; do
-            if [ -e "$item" ]; then
-              cp -r -- "$item" _site/
-            else
+          while read -r item; do
+            [ -z "$item" ] && continue
+            if [ ! -e "$item" ]; then
               echo "::error::listed for publication but missing: $item"
               exit 1
             fi
-          done
+            cp -r --parents -- "$item" _site/
+          done < /tmp/publish.txt
 
-          echo "--- staged for deployment ---"
+          echo "--- staged ---"
           find _site -maxdepth 2 | sort
 
       - name: Confirm nothing private slipped in
         run: |
           set -euo pipefail
           fail=0
-          for leak in README.md DEPLOY.md tools .gitignore .gitattributes .github; do
+          for leak in README.md DEPLOY.md tools .gitignore .gitattributes .github site.config.json; do
             if [ -e "_site/$leak" ]; then
               echo "::error::$leak must not be published"
+              fail=1
+            fi
+          done
+          # Draft pages must not reach the site, nor their photos.
+          for page in $(node -e "
+            const fs=require('fs');
+            const cfg=JSON.parse(fs.readFileSync('site.config.json','utf8'));
+            const live=new Set((cfg.publish||[]).map(p=>p==='index.html'?'':p.split('/')[0]));
+            fs.readdirSync('.',{withFileTypes:true})
+              .filter(d=>d.isDirectory()&&!d.name.startsWith('.')&&!['assets','tools','node_modules'].includes(d.name))
+              .filter(d=>fs.existsSync(d.name+'/index.html')&&!live.has(d.name))
+              .forEach(d=>console.log(d.name));
+          "); do
+            if [ -e "_site/$page" ] || [ -e "_site/assets/img/$page" ]; then
+              echo "::error::draft page $page must not be published"
               fail=1
             fi
           done
