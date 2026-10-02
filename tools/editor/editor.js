@@ -300,17 +300,49 @@
     body.appendChild(el('div', 'ed-title', p.label));
 
     if (!p.gallery) {
-      body.appendChild(el('div', 'ed-opts',
-        '<div class="ed-opts__h">Text</div>' +
-        '<p class="ed-opt__hint">This page has no photo gallery. Use ' +
-        '<b>Edit text</b> below, then click any heading or paragraph to rewrite it.</p>'));
-      body.appendChild(editToggleButton('Edit text'));
+      body.appendChild(textBlockList(p));
       return;
     }
 
     api('settings?gallery=' + encodeURIComponent(p.gallery)).then(function (s) {
       renderBlock(p, s);
     }).catch(function (e) { body.appendChild(el('div', 'ed-note', e.message)); });
+  }
+
+  /* Lists the text blocks on the page so they can be picked from the panel
+     rather than hunted for on the page. */
+  function textBlockList(p) {
+    var wrap = el('div');
+    var nodes = Array.prototype.slice.call(document.querySelectorAll('[data-ed]'));
+
+    wrap.appendChild(el('div', 'ed-sec', 'Text blocks'));
+
+    if (!nodes.length) {
+      wrap.appendChild(el('div', 'ed-note', 'This page has no editable text.'));
+      return wrap;
+    }
+
+    var list = el('div', 'ed-list');
+    nodes.forEach(function (node) {
+      var row = el('button', 'ed-row ed-row--text');
+      row.type = 'button';
+      row.appendChild(el('span', 'ed-row__tag', TAG_NAMES[node.tagName] || node.tagName));
+      var words = (node.textContent || '').trim().replace(/\s+/g, ' ');
+      row.appendChild(el('span', 'ed-row__label', words.slice(0, 48) + (words.length > 48 ? '…' : '')));
+      row.addEventListener('click', function () {
+        startEditing();
+        node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        node.focus();
+        selectText(node);
+      });
+      list.appendChild(row);
+    });
+    wrap.appendChild(list);
+
+    wrap.appendChild(el('div', 'ed-note',
+      '<b>Formatting</b>Pick a block to change its font, size, alignment, or to make ' +
+      'words bold or italic. You can also click the text straight on the page.'));
+    return wrap;
   }
 
   function thumbPath(p, file) {
@@ -381,6 +413,7 @@
 
     body.appendChild(opts);
     body.appendChild(editToggleButton('Manage photos'));
+    body.appendChild(textBlockList(p));
   }
 
   function toggleOption(label, value, hint, onChange) {
@@ -713,37 +746,216 @@
 
   /* ------------------------------------------------------------ text edits */
 
+  var selectedText = null;
+
   function enableText() {
     document.querySelectorAll('[data-ed]').forEach(function (node) {
       node.contentEditable = 'true';
       node.spellcheck = true;
-      node.dataset.edOriginal = node.textContent;
+      node.dataset.edOriginal = node.innerHTML;
 
-      node.addEventListener('blur', function () {
-        var text = node.textContent.replace(/\s+/g, ' ').trim();
-        if (text === (node.dataset.edOriginal || '').replace(/\s+/g, ' ').trim()) return;
-        busy('Saving text…');
-        api('text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ page: CFG.page, index: Number(node.dataset.ed), text: text }),
-        }).then(function () {
-          busyDone();
-          node.dataset.edOriginal = text;
-          toast('Text saved', 'ok');
-          refreshStatus();
-        }).catch(function (e) {
-          busyDone();
-          toast(e.message, 'err');
-          node.textContent = node.dataset.edOriginal;
-        });
-      });
+      node.addEventListener('focus', function () { selectText(node); });
+      node.addEventListener('mouseup', function () { syncInlineButtons(); });
+      node.addEventListener('keyup', function () { syncInlineButtons(); });
+      node.addEventListener('blur', function () { saveText(node); });
 
       node.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') { e.preventDefault(); node.blur(); }
-        if (e.key === 'Escape') { node.textContent = node.dataset.edOriginal; node.blur(); }
+        if (e.key === 'Escape') { node.innerHTML = node.dataset.edOriginal; node.blur(); }
+        /* Enter would otherwise inject a <div> or <br> the design never
+           expects, so commit instead. Shift+Enter still makes a line break. */
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); node.blur(); }
       });
     });
+  }
+
+  function saveText(node) {
+    var html = node.innerHTML;
+    var style = readStyle(node);
+    var styleChanged = JSON.stringify(style) !== (node.dataset.edStyle || '{}');
+    if (html === node.dataset.edOriginal && !styleChanged) return;
+
+    busy('Saving text…');
+    api('text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        page: CFG.page,
+        index: Number(node.dataset.ed),
+        html: html,
+        text: node.textContent,
+        style: style,
+      }),
+    }).then(function () {
+      busyDone();
+      node.dataset.edOriginal = html;
+      node.dataset.edStyle = JSON.stringify(style);
+      toast('Text saved', 'ok');
+      refreshStatus();
+    }).catch(function (e) {
+      busyDone();
+      toast(e.message, 'err');
+      node.innerHTML = node.dataset.edOriginal;
+    });
+  }
+
+  var STYLE_PROPS = ['fontFamily', 'fontSize', 'textAlign', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'color'];
+  var CSS_NAME = {
+    fontFamily: 'font-family', fontSize: 'font-size', textAlign: 'text-align',
+    fontWeight: 'font-weight', fontStyle: 'font-style', letterSpacing: 'letter-spacing',
+    lineHeight: 'line-height', color: 'color',
+  };
+
+  function readStyle(node) {
+    var out = {};
+    STYLE_PROPS.forEach(function (p) {
+      if (node.style[p]) out[CSS_NAME[p]] = node.style[p];
+    });
+    return out;
+  }
+
+  /* ------------------------------------------------ the text format panel */
+
+  var FONTS = [
+    { label: 'Default', value: '' },
+    { label: 'Serif',   value: '"Quincy CF", Georgia, serif' },
+    { label: 'Sans',    value: '"Work Sans", Helvetica, Arial, sans-serif' },
+  ];
+  var SIZES = [
+    { label: 'Default', value: '' },
+    { label: 'XS',  value: '0.75rem' },  { label: 'S',   value: '0.875rem' },
+    { label: 'M',   value: '1rem' },     { label: 'L',   value: '1.25rem' },
+    { label: 'XL',  value: '1.75rem' },  { label: '2XL', value: '2.5rem' },
+    { label: '3XL', value: '3.5rem' },
+  ];
+  var TAG_NAMES = { H1: 'Heading 1', H2: 'Heading 2', H3: 'Heading 3', H4: 'Heading 4', H5: 'Heading 5', H6: 'Eyebrow', P: 'Paragraph' };
+
+  function selectText(node) {
+    selectedText = node;
+    document.querySelectorAll('.ed-text-on').forEach(function (n) { n.classList.remove('ed-text-on'); });
+    node.classList.add('ed-text-on');
+    showTextPanel(node);
+  }
+
+  function showTextPanel(node) {
+    body.innerHTML = '';
+
+    var back = el('button', 'ed-back', ICON_BACK + '<span>Done</span>');
+    back.type = 'button';
+    back.addEventListener('click', function () {
+      node.blur();
+      node.classList.remove('ed-text-on');
+      selectedText = null;
+      stopEditing();
+    });
+    body.appendChild(back);
+
+    body.appendChild(el('div', 'ed-title', 'Text'));
+    body.appendChild(el('div', 'ed-sec', TAG_NAMES[node.tagName] || node.tagName));
+
+    var opts = el('div', 'ed-opts');
+
+    /* ---- inline: bold / italic / underline ---- */
+    var o = el('div', 'ed-opt');
+    o.appendChild(el('span', 'ed-opt__label', 'Style'));
+    var inline = el('div', 'ed-seg ed-seg--icons');
+    [['bold', '<b>B</b>', 'Bold'], ['italic', '<i>I</i>', 'Italic'], ['underline', '<u>U</u>', 'Underline']]
+      .forEach(function (c) {
+        var b = el('button', 'js-inline', c[1]);
+        b.type = 'button'; b.title = c[2]; b.dataset.cmd = c[0];
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        b.addEventListener('click', function () {
+          node.focus();
+          document.execCommand(c[0], false, null);
+          syncInlineButtons();
+          saveText(node);
+        });
+        inline.appendChild(b);
+      });
+    o.appendChild(inline);
+    o.appendChild(el('div', 'ed-opt__hint', 'Applies to the words you have selected.'));
+    opts.appendChild(o);
+
+    /* ---- alignment ---- */
+    opts.appendChild(segOption('Alignment', [
+      { label: 'Left', value: 'left' }, { label: 'Centre', value: 'center' }, { label: 'Right', value: 'right' },
+    ], node.style.textAlign || '', function (v) {
+      node.style.textAlign = v;
+      saveText(node);
+    }));
+
+    /* ---- font ---- */
+    opts.appendChild(segOption('Font', FONTS, node.style.fontFamily || '', function (v) {
+      node.style.fontFamily = v;
+      saveText(node);
+    }, 'Only the two faces the site loads. Anything else would not render for visitors.'));
+
+    /* ---- size ---- */
+    opts.appendChild(selectOption('Size', SIZES, node.style.fontSize || '', function (v) {
+      node.style.fontSize = v;
+      saveText(node);
+    }, 'Default keeps this block on the site\'s type scale, which stays readable on phones.'));
+
+    /* ---- clear ---- */
+    var clear = el('button', 'ed-btn ed-btn--wide ed-btn--ghost', 'Clear formatting');
+    clear.type = 'button';
+    clear.addEventListener('click', function () {
+      STYLE_PROPS.forEach(function (p) { node.style[p] = ''; });
+      node.innerHTML = node.textContent;
+      saveText(node);
+      showTextPanel(node);
+    });
+    var wrap = el('div'); wrap.style.padding = '6px 16px 0'; wrap.appendChild(clear);
+    opts.appendChild(wrap);
+
+    body.appendChild(opts);
+    body.appendChild(el('div', 'ed-note',
+      '<b>Editing this block</b>Type straight into the page. Enter saves, Escape ' +
+      'undoes, Shift+Enter makes a line break.'));
+
+    syncInlineButtons();
+  }
+
+  function syncInlineButtons() {
+    document.querySelectorAll('.js-inline').forEach(function (b) {
+      var on = false;
+      try { on = document.queryCommandState(b.dataset.cmd); } catch (_) {}
+      b.classList.toggle('is-on', on);
+    });
+  }
+
+  function segOption(label, choices, current, onPick, hint) {
+    var o = el('div', 'ed-opt');
+    o.appendChild(el('span', 'ed-opt__label', label));
+    var seg = el('div', 'ed-seg');
+    choices.forEach(function (c) {
+      var b = el('button', current === c.value ? 'is-on' : '', c.label);
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        seg.querySelectorAll('button').forEach(function (x) { x.classList.remove('is-on'); });
+        b.classList.add('is-on');
+        onPick(c.value);
+      });
+      seg.appendChild(b);
+    });
+    o.appendChild(seg);
+    if (hint) o.appendChild(el('div', 'ed-opt__hint', hint));
+    return o;
+  }
+
+  function selectOption(label, choices, current, onPick, hint) {
+    var o = el('div', 'ed-opt');
+    o.appendChild(el('span', 'ed-opt__label', label));
+    var sel = el('select', 'ed-select');
+    choices.forEach(function (c) {
+      var op = el('option', '', c.label);
+      op.value = c.value;
+      if (c.value === current) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.addEventListener('change', function () { onPick(sel.value); });
+    o.appendChild(sel);
+    if (hint) o.appendChild(el('div', 'ed-opt__hint', hint));
+    return o;
   }
 
   /* ---------------------------------------------------------------- publish */

@@ -371,6 +371,9 @@ ${footer}
 
 /* ------------------------------------------------- editable text scanning */
 
+/* Records both the opening tag and the inner text of every heading and
+   paragraph inside <main>, so the editor can rewrite the words and the
+   element's own styling independently. */
 function scanEditable(html) {
   const mainStart = html.indexOf('<main');
   const mainEnd = html.indexOf('</main>');
@@ -380,10 +383,58 @@ function scanEditable(html) {
   const out = [];
   let m;
   while ((m = re.exec(slice))) {
-    const innerStart = mainStart + m.index + m[0].indexOf('>', m[0].indexOf('<' + m[1])) + 1;
-    out.push({ tag: m[1], start: innerStart, end: innerStart + m[3].length });
+    const absolute = mainStart + m.index;
+    const openTag = m[0].slice(0, m[0].indexOf('>') + 1);
+    const innerStart = absolute + openTag.length;
+    out.push({
+      tag: m[1],
+      openStart: absolute,
+      openTag,
+      start: innerStart,
+      end: innerStart + m[3].length,
+    });
   }
   return out;
+}
+
+/* Only these tags survive a save. Attributes are dropped from all of them, so
+   nothing can smuggle styling or script in through the text field. */
+const INLINE_OK = /^(strong|em|b|i|u|br)$/i;
+
+function sanitizeInline(html) {
+  return String(html)
+    .replace(/<\/?([a-zA-Z0-9-]+)[^>]*>/g, (tagText, tag) =>
+      INLINE_OK.test(tag)
+        ? (tagText.startsWith('</') ? `</${tag.toLowerCase()}>` : `<${tag.toLowerCase()}>`)
+        : '')
+    .replace(/ /g, '&nbsp;');
+}
+
+/* Styling the editor is allowed to set on a block. Anything else is ignored. */
+const STYLE_OK = new Set([
+  'font-family', 'font-size', 'font-weight', 'font-style',
+  'text-align', 'line-height', 'letter-spacing', 'color', 'text-transform',
+]);
+
+function styleAttr(style) {
+  const parts = [];
+  for (const [k, v] of Object.entries(style || {})) {
+    const key = String(k).toLowerCase().trim();
+    const val = String(v).trim();
+    if (!STYLE_OK.has(key) || !val) continue;
+    /* No semicolons, no url(), no quotes that could escape the attribute. */
+    if (/[;"<>]/.test(val) || /url\s*\(|expression|javascript:/i.test(val)) continue;
+    parts.push(`${key}: ${val}`);
+  }
+  return parts.join('; ');
+}
+
+/* Rewrites (or removes) the style attribute on an opening tag. */
+function applyStyleToTag(openTag, style) {
+  const css = styleAttr(style);
+  const withoutStyle = openTag.replace(/\s+style="[^"]*"/i, '');
+  if (!css) return withoutStyle;
+  return withoutStyle.replace(/\s*\/?>$/, m => ` style="${css}"${m.trim().startsWith('/') ? ' />' : '>'}`);
 }
 
 const hashOf = s => {
@@ -621,17 +672,24 @@ async function handleApi(req, res, url, query) {
   }
 
   if (route === 'text') {
-    const { page, index, text } = body;
+    const { page, index, text, html: richHtml, style } = body;
     const abs = path.join(ROOT, page);
     if (!abs.startsWith(ROOT) || !fs.existsSync(abs)) return sendJson(res, 400, { error: 'unknown page' });
-    const html = fs.readFileSync(abs, 'utf8');
+
+    const file = fs.readFileSync(abs, 'utf8');
     const map = editableMaps.get(page);
-    if (!map || map.hash !== hashOf(html)) {
+    if (!map || map.hash !== hashOf(file)) {
       return sendJson(res, 409, { error: 'the page changed on disk since it was loaded — reload and try again' });
     }
     const r = map.ranges[index];
     if (!r) return sendJson(res, 400, { error: 'unknown text block' });
-    fs.writeFileSync(abs, html.slice(0, r.start) + escapeHtml(text) + html.slice(r.end), 'utf8');
+
+    /* `html` carries inline formatting; `text` is the plain fallback. */
+    const inner = richHtml !== undefined ? sanitizeInline(richHtml) : escapeHtml(String(text || ''));
+    const openTag = style !== undefined ? applyStyleToTag(r.openTag, style) : r.openTag;
+
+    const next = file.slice(0, r.openStart) + openTag + inner + file.slice(r.end);
+    fs.writeFileSync(abs, next, 'utf8');
     editableMaps.delete(page);
     return sendJson(res, 200, { ok: true });
   }

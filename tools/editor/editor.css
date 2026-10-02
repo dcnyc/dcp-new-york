@@ -198,6 +198,32 @@ body.ed-busy-on::before{
 .ed-seg button:hover{background:#f4f5f6}
 .ed-seg button.is-on{background:var(--ed-ink);border-color:var(--ed-ink);color:#fff;font-weight:600}
 
+/* ---------------------------------------------------- text block picker */
+.ed-row--text{align-items:flex-start;gap:8px;padding-top:8px;padding-bottom:8px}
+.ed-row__tag{
+  flex:0 0 auto;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:#7b828b;background:#f0f2f4;border-radius:4px;padding:3px 6px;margin-top:1px;
+}
+.ed-row--text .ed-row__label{white-space:normal;line-height:1.4;font-size:12.5px;color:#4a5159}
+
+/* ---------------------------------------------------------- text panel */
+.ed-seg--icons button{font-size:15px;line-height:1.1;padding:7px 0}
+.ed-seg--icons button b,.ed-seg--icons button i,.ed-seg--icons button u{font-style:normal;font-weight:400}
+.ed-seg--icons button b{font-weight:700}
+.ed-seg--icons button i{font-style:italic}
+
+.ed-select{
+  width:100%;padding:8px 10px;border:1px solid var(--ed-line);border-radius:6px;
+  font:inherit;background:#fff;color:var(--ed-ink);cursor:pointer;
+}
+.ed-select:focus{outline:none;border-color:var(--ed-accent)}
+
+/* The block currently being edited, highlighted on the page. */
+body.ed-editing [data-ed].ed-text-on{
+  outline:2px solid var(--ed-blue) !important;
+  background:rgba(74,158,255,.09) !important;
+}
+
 .ed-note{
   margin:18px 16px 0;padding:11px 12px;border-radius:7px;
   background:#fdf7e7;border:1px solid #f3e3bd;color:#7a5c12;font-size:11.5px;line-height:1.55;

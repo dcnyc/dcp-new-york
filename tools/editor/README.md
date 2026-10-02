@@ -50,7 +50,8 @@ strip, **Manage photos**, and the options for that block type.
 | Reorder photos | **Manage photos**, then drag. Saved as you drop. |
 | Add photos | Drop JPEGs on the dashed zone under the gallery, or click to browse. |
 | Remove a photo | Hover it, click the **×**. A copy is kept in `.originals/removed/`. |
-| Rewrite text | Click any heading or paragraph and type. `Enter` saves, `Esc` cancels. |
+| Rewrite text | Pick a block from **Text blocks**, or click it on the page. `Enter` saves, `Esc` undoes, `Shift+Enter` makes a line break. |
+| Format text | With a block selected: bold, italic, underline on the selected words; font, size and alignment for the whole block. |
 | Grid columns | Headshots panel → 2 / 3 / 4. Phones always show two. |
 | Slider controls | Carousel panels → toggles the arrows under the strip. |
 | Reorder the menu | Drag a page in the **Site menu** group. Every page's header, overlay and footer menu updates. |
@@ -82,6 +83,15 @@ Block options are stored in `site.config.json` at the repo root, which
 `tools/build.sh` reads at build time. That is why a setting survives a rebuild
 instead of being overwritten by it. The file is not in the deploy allowlist, so
 it stays local.
+
+Formatting is saved as an inline `style` attribute on the block, and bold or
+italic as `<strong>`/`<em>` inside it. The server keeps a strict allowlist: only
+`strong em b i u br` survive as tags, attributes are stripped from all of them,
+and only a handful of CSS properties are accepted, so nothing can be smuggled
+into a page through the text field.
+
+Font and size offer fixed choices rather than free entry. Only two faces are
+loaded by the site, and arbitrary sizes break the responsive type scale.
 
 Text edits are written back by byte range. The server records where each
 editable block sits when it serves the page and checks the file has not changed
