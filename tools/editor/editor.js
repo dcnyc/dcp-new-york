@@ -801,15 +801,19 @@
     refreshStatus();
     setInterval(refreshStatus, 15000);
 
-    /* If we arrived by clicking a page in the list, open that page's panel. */
+    /* Open on the page list, so the first thing you do is choose what to work
+       on. The panel for a particular page opens only when you deliberately
+       went there: by clicking it in the list, or after an action that reloads
+       (adding photos, changing a setting), both of which set this flag. */
     var wanted = sessionStorage.getItem('ed-open');
     sessionStorage.removeItem('ed-open');
+
+    if (!wanted) { showPages(); return; }
 
     api('pages').then(function (r) {
       state.pages = r.pages;
       var here = r.pages.filter(function (p) { return p.path === CFG.page; })[0];
-      if (wanted && here && wanted === CFG.page) showPage(here);
-      else if (here) showPage(here);
+      if (here && wanted === CFG.page) showPage(here);
       else showPages();
     }).catch(showPages);
   });
