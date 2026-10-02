@@ -299,6 +299,12 @@
     body.appendChild(el('div', 'ed-title', p.label));
     body.appendChild(publishOption(p));
 
+    if (p.type === 'links') {
+      body.appendChild(linksPanel(p));
+      body.appendChild(textBlockList(p));
+      return;
+    }
+
     if (!p.gallery) {
       body.appendChild(textBlockList(p));
       return;
@@ -307,6 +313,80 @@
     api('settings?gallery=' + encodeURIComponent(p.gallery)).then(function (s) {
       renderBlock(p, s);
     }).catch(function (e) { body.appendChild(el('div', 'ed-note', e.message)); });
+  }
+
+  /* Instagram posts shown on a Links page. */
+  function linksPanel(p) {
+    var wrap = el('div');
+    wrap.appendChild(el('div', 'ed-sec', 'Instagram posts'));
+
+    var urls = Array.prototype.slice.call(document.querySelectorAll('.instagram-media'))
+      .map(function (n) { return n.getAttribute('data-instgrm-permalink'); })
+      .filter(Boolean);
+
+    var list = el('div', 'ed-list');
+    function render() {
+      list.innerHTML = '';
+      if (!urls.length) {
+        list.appendChild(el('div', 'ed-opt__hint', 'No posts yet. Paste a post link below.'));
+      }
+      urls.forEach(function (u, i) {
+        var row = el('div', 'ed-linkrow');
+        row.appendChild(el('span', 'ed-linkrow__u', u.replace('https://www.instagram.com', '')));
+        var del = el('button', 'ed-linkrow__x', '×');
+        del.type = 'button'; del.title = 'Remove';
+        del.addEventListener('click', function () { urls.splice(i, 1); render(); save(); });
+        row.appendChild(del);
+        list.appendChild(row);
+      });
+    }
+
+    function save() {
+      busy('Updating posts…');
+      api('links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ page: p.path, urls: urls }),
+      }).then(function () {
+        busyDone();
+        toast('Posts updated', 'ok');
+        refreshStatus();
+        sessionStorage.setItem('ed-open', p.path);
+        setTimeout(function () { location.reload(); }, 500);
+      }).catch(function (e) { busyDone(); toast(e.message, 'err'); });
+    }
+
+    render();
+    wrap.appendChild(list);
+
+    var add = el('div', 'ed-opts');
+    var o = el('div', 'ed-opt');
+    o.appendChild(el('span', 'ed-opt__label', 'Add a post'));
+    var row = el('div', 'ed-linkadd');
+    var input = el('input', 'ed-select');
+    input.type = 'text';
+    input.placeholder = 'https://www.instagram.com/p/…';
+    var go = el('button', 'ed-btn', 'Add');
+    go.type = 'button';
+    function addUrl() {
+      var v = input.value.trim();
+      if (!v) return;
+      urls.push(v); input.value = ''; render(); save();
+    }
+    go.addEventListener('click', addUrl);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') addUrl(); });
+    row.appendChild(input); row.appendChild(go);
+    o.appendChild(row);
+    o.appendChild(el('div', 'ed-opt__hint',
+      'Open a post on Instagram and copy its address from the browser bar.'));
+    add.appendChild(o);
+    wrap.appendChild(add);
+
+    wrap.appendChild(el('div', 'ed-note',
+      '<b>Individual posts only</b>Instagram stopped allowing a whole profile feed to be ' +
+      'embedded, so this shows the posts you pick rather than updating by itself. A live ' +
+      'self-updating grid needs a third-party widget such as LightWidget or Elfsight.'));
+    return wrap;
   }
 
   /* Whether the page is part of the live site. Separate from the menu: a page
@@ -709,18 +789,40 @@
 
   /* -------------------------------------------------------------- add page */
 
+  var PAGE_TYPES = [
+    {
+      value: 'gallery',
+      name: 'Gallery',
+      blurb: 'A photo slider, the same one the home page uses. Comes with its own photo folder.',
+      icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2.5" y="4.5" width="15" height="11"/><path d="M2.5 12l4-3.5 3.5 3 3-2.5 4.5 4"/></svg>',
+    },
+    {
+      value: 'text',
+      name: 'Text',
+      blurb: 'A blank page of words. Headings and paragraphs you can rewrite and format.',
+      icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 5.5h12M4 9.5h12M4 13.5h7"/></svg>',
+    },
+    {
+      value: 'links',
+      name: 'Links',
+      blurb: 'A follow page with Instagram posts embedded and a link out to your profile.',
+      icon: '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3.5" y="3.5" width="13" height="13" rx="4"/><circle cx="10" cy="10" r="3"/><circle cx="14" cy="6" r=".9" fill="currentColor"/></svg>',
+    },
+  ];
+
   function openAddPage() {
+    var chosen = 'gallery';
     var modal = el('div', 'ed-modal');
     modal.innerHTML =
       '<div class="ed-modal__box">' +
       '  <div class="ed-modal__head">Add a page</div>' +
       '  <div class="ed-modal__body">' +
-      '    <p>Creates an empty gallery page built from the same template as Portraits, with its own photo folder.</p>' +
+      '    <div class="ed-types"></div>' +
       '    <input type="text" class="ed-name" placeholder="Page name, e.g. Weddings">' +
       '    <div class="ed-opt__hint ed-slug"></div>' +
       '    <div class="ed-note" style="margin:14px 0 0">' +
-      '      <b>It starts as a draft</b>The page is left out of the deploy allowlist and the ' +
-      '      menus, so publishing will not put it on the live site until you add it deliberately.' +
+      '      <b>It starts as a draft</b>The page is kept out of the menus and off the live ' +
+      '      site until you deliberately put it there, so publishing will not expose it.' +
       '    </div>' +
       '  </div>' +
       '  <div class="ed-modal__foot">' +
@@ -729,6 +831,21 @@
       '  </div>' +
       '</div>';
     document.body.appendChild(modal);
+
+    var types = modal.querySelector('.ed-types');
+    PAGE_TYPES.forEach(function (t) {
+      var row = el('button', 'ed-type' + (t.value === chosen ? ' is-on' : ''));
+      row.type = 'button';
+      row.innerHTML =
+        '<span class="ed-type__ico">' + t.icon + '</span>' +
+        '<span class="ed-type__text"><b>' + t.name + '</b>' + t.blurb + '</span>';
+      row.addEventListener('click', function () {
+        chosen = t.value;
+        types.querySelectorAll('.ed-type').forEach(function (x) { x.classList.remove('is-on'); });
+        row.classList.add('is-on');
+      });
+      types.appendChild(row);
+    });
 
     var input = modal.querySelector('.ed-name');
     var slugEl = modal.querySelector('.ed-slug');
@@ -758,7 +875,7 @@
       api('pages/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label: label }),
+        body: JSON.stringify({ label: label, type: chosen }),
       }).then(function (r) {
         busyDone();
         modal.remove();

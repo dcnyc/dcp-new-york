@@ -130,12 +130,15 @@ function discoverPages() {
 
     let type = null;
     if (html.includes('headshot-grid')) type = 'grid';
+    else if (html.includes('links__embeds')) type = 'links';
     else if (html.includes('carousel__track')) type = 'carousel';
+    else type = 'text';
 
+    const isGalleryType = type === 'grid' || type === 'carousel';
     return Object.assign({}, p, {
       label: (cfg.pages && cfg.pages[p.path] && cfg.pages[p.path].label)
              || LABELS[p.path] || titleCase(p.slug),
-      gallery: (type && hasImages) ? (p.slug || 'portraits') : null,
+      gallery: (isGalleryType && hasImages) ? (p.slug || 'portraits') : null,
       dir: imgDir,
       type,
       builtByScript: BUILT_BY_SCRIPT.has(p.path),
@@ -273,6 +276,30 @@ function gridMarkup(page, files) {
   return `    <section class="headshot-grid" data-cols="${cols}">\n${rows.join('\n')}\n    </section>`;
 }
 
+/* ---------------------------------------------------------- Instagram ---- */
+
+const IG_POST = /^https:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv)\/[A-Za-z0-9_-]+\/?/;
+
+const pageLinks = pagePath => (readConfig().links || {})[pagePath] || [];
+
+function embedsMarkup(urls) {
+  if (!urls.length) {
+    return '      <div class="links__embeds">\n      </div>';
+  }
+  const blocks = urls.map(u =>
+    `        <blockquote class="instagram-media" data-instgrm-permalink="${u}" data-instgrm-version="14"></blockquote>`
+  ).join('\n');
+  return `      <div class="links__embeds">\n${blocks}\n      </div>`;
+}
+
+function regenerateLinks(pagePath) {
+  const abs = path.join(ROOT, pagePath);
+  const html = fs.readFileSync(abs, 'utf8');
+  const re = /[ \t]*<div class="links__embeds">[\s\S]*?<\/div>/;
+  if (!re.test(html)) throw new Error('links section not found in ' + pagePath);
+  fs.writeFileSync(abs, html.replace(re, embedsMarkup(pageLinks(pagePath))), 'utf8');
+}
+
 async function regenerate(galleryName) {
   const page = pageByGallery(galleryName);
   if (!page) throw new Error('unknown gallery');
@@ -324,7 +351,67 @@ function applyOrder(galleryName, order) {
 
 /* ------------------------------------------------------- new page template */
 
-function newPageHtml(slug, label) {
+/* The <main> contents for each kind of new page. */
+function pageBody(type, label) {
+  if (type === 'text') {
+    return `    <section class="page-head">
+      <h1 class="page-head__title">${label}</h1>
+    </section>
+
+    <section class="prose">
+      <p>Write the opening paragraph here. Click any block in the editor to
+        change its words, font, size or alignment.</p>
+      <p>Add as many paragraphs as you need. This page has no gallery, so it is
+        a good fit for an about page, a price list, or anything mostly words.</p>
+    </section>`;
+  }
+
+  if (type === 'links') {
+    return `    <section class="page-head">
+      <h1 class="page-head__title">${label}</h1>
+    </section>
+
+    <section class="links">
+      <div class="links__buttons">
+        <a class="btn" href="https://www.instagram.com/dcpnewyork" target="_blank" rel="noopener noreferrer">Follow on Instagram</a>
+      </div>
+
+      <!--
+        Instagram posts embedded below. Add or remove them from the editor's
+        panel for this page; the markup here is regenerated from that list.
+
+        Note: Instagram allows a public POST to be embedded, but no longer
+        offers an embed of a whole profile feed. A live, self-updating grid
+        needs a third-party widget such as LightWidget or Elfsight.
+      -->
+      <div class="links__embeds">
+      </div>
+      <script async src="https://www.instagram.com/embed.js"></script>
+    </section>`;
+  }
+
+  /* gallery: the same slider the home page uses */
+  return `    <section class="photo-slider">
+      <div class="carousel js-carousel">
+        <div class="carousel__track">
+        </div>
+
+        <button class="carousel__zone carousel__zone--prev js-prev" type="button" aria-label="Previous photo"></button>
+        <button class="carousel__zone carousel__zone--next js-next" type="button" aria-label="Next photo"></button>
+
+        <div class="carousel__nav">
+          <button class="js-prev" type="button" aria-label="Previous photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button class="js-next" type="button" aria-label="Next photo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>`;
+}
+
+function newPageHtml(slug, label, type) {
   const title = `${label} | DCP New York`;
   const jsonld = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')
     .match(/[ \t]*<script type="application\/ld\+json">[\s\S]*?<\/script>/)?.[0] || '';
@@ -377,24 +464,7 @@ ${header}
 
 ${overlay}
   <main role="main">
-    <section class="photo-slider">
-      <div class="carousel js-carousel">
-        <div class="carousel__track">
-        </div>
-
-        <button class="carousel__zone carousel__zone--prev js-prev" type="button" aria-label="Previous photo"></button>
-        <button class="carousel__zone carousel__zone--next js-next" type="button" aria-label="Next photo"></button>
-
-        <div class="carousel__nav">
-          <button class="js-prev" type="button" aria-label="Previous photo">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
-          </button>
-          <button class="js-next" type="button" aria-label="Next photo">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-      </div>
-    </section>
+${pageBody(type, label)}
   </main>
 
 ${footer}
@@ -622,6 +692,34 @@ async function handleApi(req, res, url, query) {
     });
   }
 
+  /* ---- Instagram posts shown on a Links page ---- */
+  if (route === 'links') {
+    const { page, urls } = body;
+    const known = discoverPages().find(p => p.path === page);
+    if (!known || known.type !== 'links') return sendJson(res, 400, { error: 'not a links page' });
+
+    const clean = [];
+    for (const raw of (urls || [])) {
+      const u = String(raw).trim().split('?')[0];
+      if (!u) continue;
+      if (!IG_POST.test(u)) {
+        return sendJson(res, 400, {
+          error: `"${u}" is not an Instagram post link. It should look like ` +
+                 `https://www.instagram.com/p/XXXXXXXXXXX/`,
+        });
+      }
+      if (!clean.includes(u)) clean.push(u);
+    }
+
+    const cfg = readConfig();
+    cfg.links = cfg.links || {};
+    cfg.links[page] = clean;
+    writeConfig(cfg);
+
+    regenerateLinks(page);
+    return sendJson(res, 200, { ok: true, urls: clean });
+  }
+
   /* ---- include a page in the live site, or hold it back ---- */
   if (route === 'pages/publish') {
     const { page, live } = body;
@@ -644,6 +742,7 @@ async function handleApi(req, res, url, query) {
 
   if (route === 'pages/create') {
     const label = String(body.label || '').trim();
+    const type = ['gallery','text','links'].includes(body.type) ? body.type : 'gallery';
     if (!label) return sendJson(res, 400, { error: 'a page name is required' });
     const slug = slugify(label);
     if (!slug) return sendJson(res, 400, { error: 'that name has no usable letters or numbers' });
@@ -651,10 +750,14 @@ async function handleApi(req, res, url, query) {
     if (fs.existsSync(path.join(ROOT, slug))) return sendJson(res, 400, { error: `a page or folder called "${slug}" already exists` });
 
     fs.mkdirSync(path.join(ROOT, slug), { recursive: true });
-    fs.mkdirSync(path.join(ROOT, 'assets/img', slug), { recursive: true });
-    fs.writeFileSync(path.join(ROOT, slug, 'index.html'), newPageHtml(slug, label), 'utf8');
-    fs.writeFileSync(path.join(ROOT, 'assets/img', slug, '.gitkeep'),
-      `Photos for the "${label}" page. Named NN-name.jpg; the number sets the order.\n`);
+    fs.writeFileSync(path.join(ROOT, slug, 'index.html'), newPageHtml(slug, label, type), 'utf8');
+
+    /* Only a gallery page needs somewhere to put photos. */
+    if (type === 'gallery') {
+      fs.mkdirSync(path.join(ROOT, 'assets/img', slug), { recursive: true });
+      fs.writeFileSync(path.join(ROOT, 'assets/img', slug, '.gitkeep'),
+        `Photos for the "${label}" page. Named NN-name.jpg; the number sets the order.\n`);
+    }
 
     /* New pages start held back: not in the menu, not on the live site. */
     setPublished(`${slug}/index.html`, false);
@@ -662,9 +765,10 @@ async function handleApi(req, res, url, query) {
     const cfg = readConfig();
     cfg.pages = cfg.pages || {};
     cfg.pages[`${slug}/index.html`] = { label };
+    if (type === 'links') { cfg.links = cfg.links || {}; cfg.links[`${slug}/index.html`] = []; }
     writeConfig(cfg);
 
-    return sendJson(res, 200, { ok: true, slug, url: `/${slug}/`, label, photosHeldBack: true });
+    return sendJson(res, 200, { ok: true, slug, url: `/${slug}/`, label, type });
   }
 
   if (route === 'gallery/reorder') {

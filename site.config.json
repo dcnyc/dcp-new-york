@@ -5,6 +5,9 @@
     },
     "portraits": {
       "showControls": true
+    },
+    "newyork": {
+      "showControls": true
     }
   },
   "pages": {

@@ -349,6 +349,41 @@ body.menu-open{overflow:hidden}
 }
 
 /* ==========================================================================
+   Text page
+   ========================================================================== */
+.prose{
+  max-width:680px;margin:0 auto;
+  padding:0 var(--block-edge-space-x) 90px;
+  color:var(--primary-paragraphs);
+}
+.prose p + p{margin-top:1.2em}
+.prose h2,.prose h3{margin:1.6em 0 .5em;color:var(--primary-headings)}
+
+/* ==========================================================================
+   Links page — follow buttons and embedded Instagram posts
+   ========================================================================== */
+.links{
+  max-width:var(--max-page-width);margin:0 auto;
+  padding:0 var(--block-edge-space-x) 90px;text-align:center;
+}
+.links__buttons{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-bottom:40px}
+.links__embeds{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:18px;align-items:start;justify-items:center;
+}
+/* Instagram's own stylesheet sets a min-width that overflows narrow screens. */
+.links__embeds .instagram-media{
+  min-width:0 !important;max-width:100% !important;width:100% !important;margin:0 !important;
+}
+
+@media screen and (max-width:767px){
+  .links{padding-bottom:64px}
+  .links__buttons{margin-bottom:28px}
+  .links__embeds{grid-template-columns:1fr;gap:14px}
+  .prose{padding-bottom:64px}
+}
+
+/* ==========================================================================
    Client — front door to the password-protected galleries
    ========================================================================== */
 .gate{
