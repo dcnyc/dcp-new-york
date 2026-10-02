@@ -31,6 +31,3 @@ Desktop.ini
 # ---------------------------------------------------------------------------
 /assets/img/headshots/headshot-*.jpg
 
-# TEMPORARY: held back until the new deploy workflow is in place on GitHub.
-# Remove once .github/workflows/pages.yml has been updated.
-/assets/img/real-estate/*.jpg
