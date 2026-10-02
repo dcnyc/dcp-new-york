@@ -203,12 +203,6 @@
       var dragging = document.querySelector('.ed-row.ed-dragging');
       if (!dragging) return;
 
-      /* A draft page is not on the live site, so linking it would put a menu
-         item on the site that 404s. Refuse the drop rather than allow it. */
-      if (list.classList.contains('ed-list--menu') && dragging.dataset.published === 'false') {
-        list.classList.add('ed-list--refuse');
-        return;
-      }
       list.classList.add('ed-list--target');
 
       var after = null;
@@ -238,9 +232,14 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ order: order }),
-    }).then(function () {
+    }).then(function (r) {
       busyDone();
-      toast('Menu updated', 'ok');
+      if (r.nowPublished && r.nowPublished.length) {
+        toast(r.nowPublished.join(' and ') + ' added to the menu and set to go live. ' +
+              'Press Publish to put it on the site.', 'ok');
+      } else {
+        toast('Menu updated. Press Publish to put it on the site.', 'ok');
+      }
       refreshStatus();
       showPages();
     }).catch(function (e) {
@@ -298,6 +297,7 @@
     body.appendChild(back);
 
     body.appendChild(el('div', 'ed-title', p.label));
+    body.appendChild(publishOption(p));
 
     if (!p.gallery) {
       body.appendChild(textBlockList(p));
@@ -307,6 +307,36 @@
     api('settings?gallery=' + encodeURIComponent(p.gallery)).then(function (s) {
       renderBlock(p, s);
     }).catch(function (e) { body.appendChild(el('div', 'ed-note', e.message)); });
+  }
+
+  /* Whether the page is part of the live site. Separate from the menu: a page
+     can be live without being linked, as New York is. */
+  function publishOption(p) {
+    var opts = el('div', 'ed-opts');
+    opts.appendChild(toggleOption(
+      'Include on the live site', p.published,
+      p.inMenu
+        ? 'This page is in the site menu, so it has to stay on the site. Drag it out of the menu first to hold it back.'
+        : 'Off keeps the page, and its photos, out of the deploy entirely. Nothing changes on the web until you press Publish.',
+      function (on) {
+        busy(on ? 'Including page…' : 'Holding page back…');
+        api('pages/publish', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page: p.path, live: on }),
+        }).then(function () {
+          busyDone();
+          toast(on ? 'Will go live on the next Publish' : 'Held back from the site', 'ok');
+          p.published = on;
+          refreshStatus();
+        }).catch(function (e) {
+          busyDone();
+          toast(e.message, 'err');
+          showPage(p);
+        });
+      }
+    ));
+    return opts;
   }
 
   /* Lists the text blocks on the page so they can be picked from the panel

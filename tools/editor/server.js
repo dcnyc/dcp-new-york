@@ -160,13 +160,49 @@ function gallerySettings(name) {
   return Object.assign(defaults, (readConfig().galleries || {})[name] || {});
 }
 
-function publishedSet() {
-  try {
-    const wf = fs.readFileSync(path.join(ROOT, '.github/workflows/pages.yml'), 'utf8');
-    const block = wf.match(/PUBLISH=\(([\s\S]*?)\)/);
-    if (!block) return null;
-    return new Set(block[1].split('\n').map(s => s.trim()).filter(Boolean));
-  } catch (_) { return null; }
+/* Which pages go live. Held in site.config.json so the editor can change it
+   and push; the deploy workflow reads the same list. */
+const PUBLISH_FALLBACK = [
+  'index.html', 'events/index.html', 'newyork/index.html',
+  'contact/index.html', 'client/index.html',
+];
+
+function publishedPages() {
+  const cfg = readConfig();
+  return Array.isArray(cfg.publish) && cfg.publish.length ? cfg.publish : PUBLISH_FALLBACK;
+}
+const publishedSet = () => new Set(publishedPages());
+
+/* Photos for a draft page are kept out of the public repository. Once the page
+   goes live its photos have to be committed, so the rule comes back off. */
+function setPhotoIgnore(slug, ignored) {
+  const file = path.join(ROOT, '.gitignore');
+  if (!fs.existsSync(file) || !slug) return;
+  const rule = `/assets/img/${slug}/*.jpg`;
+  let text = fs.readFileSync(file, 'utf8');
+  const has = text.includes(rule);
+
+  if (ignored && !has) {
+    text = text.replace(/\s*$/, '\n') +
+      `\n# Photos for the draft "${slug}" page. Removed when it is published.\n${rule}\n`;
+  } else if (!ignored && has) {
+    text = text
+      .replace(new RegExp(`\\n?#[^\\n]*"${slug}"[^\\n]*\\n`), '\n')
+      .replace(new RegExp(`\\n?${rule.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`), '\n');
+  } else return;
+
+  fs.writeFileSync(file, text, 'utf8');
+}
+
+function setPublished(pagePath, live) {
+  const cfg = readConfig();
+  const list = new Set(publishedPages());
+  if (live) list.add(pagePath); else list.delete(pagePath);
+  cfg.publish = Array.from(list);
+  writeConfig(cfg);
+
+  const slug = pagePath === 'index.html' ? '' : pagePath.split('/')[0];
+  setPhotoIgnore(slug, !live);
 }
 
 const NAV = require(path.join(ROOT, 'tools', 'nav.js'));
@@ -500,7 +536,7 @@ async function handleApi(req, res, url, query) {
       path: p.path, url: p.url, label: p.label, gallery: p.gallery, type: p.type,
       photos: p.gallery ? listGallery(p.gallery).length : 0,
       inMenu: inMenu.has(p.path),
-      published: published ? published.has(p.slug || 'index.html') : true,
+      published: published.has(p.path),
     }));
 
     const menu = order.map(pp => all.find(p => p.path === pp)).filter(Boolean);
@@ -565,32 +601,45 @@ async function handleApi(req, res, url, query) {
     const bad = order.filter(p => !known.has(p));
     if (bad.length) return sendJson(res, 400, { error: 'unknown page: ' + bad[0] });
 
-    /* A page that is not deployed must not be linked, or the live site gets a
-       menu item that 404s for every visitor. */
-    const published = publishedSet();
-    if (published) {
-      const draft = order.find(p => {
-        const page = discoverPages().find(x => x.path === p);
-        return page && !published.has(page.slug || 'index.html');
-      });
-      if (draft) {
-        const label = discoverPages().find(x => x.path === draft).label;
-        return sendJson(res, 400, {
-          error: `"${label}" is a draft and is not on the live site, so it cannot go in the menu yet. ` +
-                 `Add it to the PUBLISH list in .github/workflows/pages.yml first.`,
-        });
-      }
-    }
     if (!order.includes('index.html')) {
       return sendJson(res, 400, { error: 'the home page has to stay in the menu' });
     }
+
+    /* Anything put in the menu must also go live, or visitors get a menu item
+       that 404s. Nothing reaches the site until Publish is pressed. */
+    const published = publishedSet();
+    const newlyLive = order.filter(p => !published.has(p));
+    newlyLive.forEach(p => setPublished(p, true));
 
     const cfg = readConfig();
     cfg.nav = order;
     writeConfig(cfg);
 
     const built = await applyNavEverywhere();
-    return sendJson(res, 200, { ok: true, nav: order, rebuild: built.ok });
+    return sendJson(res, 200, {
+      ok: true, nav: order, rebuild: built.ok,
+      nowPublished: newlyLive.map(p => discoverPages().find(x => x.path === p)?.label || p),
+    });
+  }
+
+  /* ---- include a page in the live site, or hold it back ---- */
+  if (route === 'pages/publish') {
+    const { page, live } = body;
+    const known = discoverPages().find(p => p.path === page);
+    if (!known) return sendJson(res, 400, { error: 'unknown page' });
+    if (page === 'index.html' && !live) {
+      return sendJson(res, 400, { error: 'the home page cannot be taken off the site' });
+    }
+    /* Taking a page off the site while it is still in the menu would leave a
+       link to nowhere. */
+    if (!live && navOrder().includes(page)) {
+      return sendJson(res, 400, {
+        error: `"${known.label}" is in the site menu. Drag it out of the menu first, then it can be held back.`,
+      });
+    }
+
+    setPublished(page, !!live);
+    return sendJson(res, 200, { ok: true, page, live: !!live });
   }
 
   if (route === 'pages/create') {
@@ -607,18 +656,8 @@ async function handleApi(req, res, url, query) {
     fs.writeFileSync(path.join(ROOT, 'assets/img', slug, '.gitkeep'),
       `Photos for the "${label}" page. Named NN-name.jpg; the number sets the order.\n`);
 
-    /* Hold the photos back. A draft page is not deployed, but everything
-       under assets/ is published wholesale, so without this its photos would
-       be reachable at their direct URLs the moment they were committed. The
-       rule is removed when the page is launched. */
-    const ignorePath = path.join(ROOT, '.gitignore');
-    const rule = `/assets/img/${slug}/*.jpg`;
-    let ignore = fs.existsSync(ignorePath) ? fs.readFileSync(ignorePath, 'utf8') : '';
-    if (!ignore.includes(rule)) {
-      ignore = ignore.replace(/\s*$/, '\n') +
-        `\n# Photos for the draft "${label}" page. Delete this line when it launches.\n${rule}\n`;
-      fs.writeFileSync(ignorePath, ignore, 'utf8');
-    }
+    /* New pages start held back: not in the menu, not on the live site. */
+    setPublished(`${slug}/index.html`, false);
 
     const cfg = readConfig();
     cfg.pages = cfg.pages || {};

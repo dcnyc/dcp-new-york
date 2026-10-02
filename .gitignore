@@ -30,5 +30,7 @@ Desktop.ini
 # DELETE THESE TWO LINES when you are ready to publish the Headshots page.
 # ---------------------------------------------------------------------------
 /assets/img/headshots/headshot-*.jpg
-/assets/img/real-estate/*.jpg
 
+# TEMPORARY: held back until the new deploy workflow is in place on GitHub.
+# Remove once .github/workflows/pages.yml has been updated.
+/assets/img/real-estate/*.jpg

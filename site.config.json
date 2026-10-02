@@ -15,7 +15,16 @@
   "nav": [
     "index.html",
     "events/index.html",
+    "real-estate/index.html",
     "client/index.html",
     "contact/index.html"
+  ],
+  "publish": [
+    "index.html",
+    "events/index.html",
+    "newyork/index.html",
+    "contact/index.html",
+    "client/index.html",
+    "real-estate/index.html"
   ]
 }
