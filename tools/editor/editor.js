@@ -787,14 +787,17 @@
       }),
     }).then(function () {
       busyDone();
+      node.classList.remove('ed-text-unsaved');
       node.dataset.edOriginal = html;
       node.dataset.edStyle = JSON.stringify(style);
       toast('Text saved', 'ok');
       refreshStatus();
     }).catch(function (e) {
       busyDone();
-      toast(e.message, 'err');
-      node.innerHTML = node.dataset.edOriginal;
+      /* Never throw away what was typed. Reverting here was making a failed
+         save look like the edit had silently vanished. */
+      toast('Not saved: ' + e.message + ' Your text is still on screen.', 'err');
+      node.classList.add('ed-text-unsaved');
     });
   }
 

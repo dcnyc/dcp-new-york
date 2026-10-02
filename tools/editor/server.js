@@ -690,7 +690,13 @@ async function handleApi(req, res, url, query) {
 
     const next = file.slice(0, r.openStart) + openTag + inner + file.slice(r.end);
     fs.writeFileSync(abs, next, 'utf8');
-    editableMaps.delete(page);
+
+    /* Re-map against what was just written rather than dropping the map. The
+       file has legitimately changed, and without this every save after the
+       first on a page load would be rejected as a conflict. Block indices are
+       stable because only one block's contents moved. */
+    editableMaps.set(page, { hash: hashOf(next), ranges: scanEditable(next) });
+
     return sendJson(res, 200, { ok: true });
   }
 

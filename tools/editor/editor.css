@@ -290,3 +290,9 @@ body.ed-editing [data-ed]:focus{outline:2px solid var(--ed-blue);background:rgba
 .ed-toast--err{background:var(--ed-danger)}
 .ed-toast--ok{background:var(--ed-accent)}
 @keyframes ed-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* A block whose save failed: the text is still there, but not on disk. */
+body.ed-editing [data-ed].ed-text-unsaved{
+  outline:2px solid var(--ed-danger) !important;
+  background:rgba(229,72,77,.08) !important;
+}
